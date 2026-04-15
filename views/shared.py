@@ -247,10 +247,10 @@ def render_methodology_notes() -> None:
     with st.container(border=True):
         st.subheader("How To Read This Dashboard")
         st.write(
-            "This executive view is designed to help Hilti managers find the territories with the strongest growth case inside a selected city. The map and ranking are the primary decision tools, while advanced scoring stays collapsed unless an expert wants to explain the model."
+            "This executive view is designed to help Hilti managers find the territories with the strongest growth case inside a selected city. The map is the primary decision surface, while the top-5 ranking is only a reference summary and advanced scoring stays collapsed unless an expert wants to explain the model."
         )
         st.write(
-            "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. That detail is intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."
+            "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. The deployable runtime bundle is packaged in the repository data folder. Both details are intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."
         )
 
     left, right = st.columns(2, gap="large")
