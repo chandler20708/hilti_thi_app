@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from uuid import uuid4
 
-import streamlit as st
+import streamlit.components.v1 as components
 
 
 def render_leaflet_metric_map(
@@ -364,4 +364,4 @@ def render_leaflet_metric_map(
     </html>
     """
 
-    st.components.v1.html(html, height=height + 6)
+    components.html(html, height=height + 6)
