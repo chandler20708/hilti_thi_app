@@ -60,7 +60,7 @@ def _run_server() -> None:
 
 
 def _find_free_port(host: str, start_port: int) -> int:
-    for port in range(start_port, start_port + 25):
+    for port in range(start_port, start_port + 200):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:

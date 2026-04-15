@@ -23,7 +23,10 @@ def render_page() -> None:
     base = load_prototype_geo_dataframe()
     options = get_filter_options(base)
     store_locations = load_hilti_store_locations()
-    server_url = ensure_map_service(base)
+    if "map_url" not in st.session_state:
+        st.session_state["map_url"] = ensure_map_service(base)
+
+    server_url = st.session_state["map_url"]
 
     render_app_frame()
     city_options = options["sprawls"]
