@@ -16,12 +16,12 @@ def _resolve_data_path(filenames: tuple[str, ...], env_keys: tuple[str, ...]) ->
             return env_path
 
     candidate_roots = [
-        PROJECT_ROOT / "data",
         APP_ROOT / "data",
+        PROJECT_ROOT / "data",
         Path.cwd() / "data",
         Path.cwd().parent / "data",
-        PROJECT_ROOT,
         APP_ROOT,
+        PROJECT_ROOT,
         Path.cwd(),
         Path.cwd().parent,
     ]

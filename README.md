@@ -7,7 +7,7 @@ This folder now contains a manager-facing Streamlit dashboard organised around a
 - `controllers/` for filtering and page orchestration helpers
 - `services/` for the local async map API
 - `docs/` for methodology and research notes
-- `../data/` for deployable runtime data assets
+- `data/` for deployable runtime data assets
 
 The app is still a prototype. The scoring logic and several commercial signals remain provisional, and some Hilti-facing metrics still rely on synthetic augmentation because of access and confidentiality limits.
 
@@ -57,11 +57,11 @@ The prototype uses a hybrid data model:
 
 - observed workbook rows are preserved where they exist
 - synthetic portfolio metrics are generated for all UK districts
-- runtime data files are resolved from `../data/` first, then legacy root paths
+- runtime data files are resolved from `data/` first, then legacy fallback paths
 
 ### Runtime data assets
 
-The deployable data bundle now lives in the repository-level `data/` folder:
+The deployable data bundle now lives in the app-local `data/` folder:
 
 - `data/dataset2.xlsx`
 - `data/UK_postcode_districts.parquet`
@@ -123,7 +123,7 @@ pip install -r hilti_thi_app/requirements.txt
 
 ## Streamlit Cloud deployment
 
-In the normal case, no secrets are required as long as the `data/` folder is committed with the app.
+In the normal case, no secrets are required as long as the app-local `data/` folder is committed with the app.
 
 If you need to override the paths in Streamlit Cloud, use TOML secrets like this:
 
