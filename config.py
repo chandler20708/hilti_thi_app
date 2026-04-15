@@ -44,6 +44,3 @@ DISTRICT_DATA_PATH = _resolve_data_path(
 )
 DISTRICT_GPKG_PATH = DISTRICT_DATA_PATH
 CASE_STUDY_PATH = _resolve_data_path(("Hilti Case Study 2026.pdf",), ("HILTI_CASE_STUDY_PATH",))
-
-MAP_HOST = "127.0.0.1"
-MAP_PORT = 8765

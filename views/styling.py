@@ -1,8 +1,8 @@
 APP_CSS = """
 <style>
   .main .block-container {
-    padding-top: 1.3rem;
-    padding-bottom: 2rem;
+    padding-top: 0.6rem;
+    padding-bottom: 1rem;
     max-width: 1520px;
   }
 
@@ -66,10 +66,10 @@ APP_CSS = """
     border: 1px solid rgba(16, 24, 40, 0.08);
     border-radius: 16px;
     padding: 1rem;
-    min-height: 140px;          /* 👈 more space */
+    min-height: 120px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;  /* 👈 pushes chart to bottom */
+    justify-content: space-between;
   }
 
   .metric-spark {

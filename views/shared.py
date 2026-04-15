@@ -156,7 +156,7 @@ def _render_mini_distribution(values):
 
     st.plotly_chart(
         fig,
-        use_container_width=True,
+        width="stretch",
         config={"displayModeBar": False}
     )
     st.markdown(
@@ -200,7 +200,7 @@ def render_top_territories_snapshot(df, metric_key: str) -> None:
     summary_rows.columns = ["Territory", METRIC_CONFIG[metric_key]["short_label"], "Sales Emphasis"]
     summary_rows[METRIC_CONFIG[metric_key]["short_label"]] = summary_rows[METRIC_CONFIG[metric_key]["short_label"]].map(lambda value: f"{value:.1f}")
     st.caption("Reference only. Use the map to browse the full city footprint.")
-    st.dataframe(summary_rows, use_container_width=True, hide_index=True)
+    st.dataframe(summary_rows, width="stretch", hide_index=True)
 
 
 def render_market_scatter(df) -> None:
@@ -219,7 +219,7 @@ def render_market_scatter(df) -> None:
         },
     )
     fig.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10), coloraxis_showscale=False)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def build_territory_story(row, city_df) -> dict[str, str]:
@@ -302,7 +302,7 @@ def render_methodology_notes() -> None:
             "This executive view is designed to help Hilti managers find the territories with the strongest growth case inside a selected city. The map is the primary decision surface, while the top-5 ranking is only a reference summary and advanced scoring stays collapsed unless an expert wants to explain the model."
         )
         st.write(
-            "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. The deployable runtime bundle is packaged in the repository data folder. Both details are intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."
+            "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. The deployable runtime bundle is packaged in the app-local data folder. Both details are intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."
         )
 
     left, right = st.columns(2, gap="large")
@@ -342,4 +342,4 @@ def render_ranking_bar(df, metric_key: str, title: str) -> None:
         hover_data={"primary_segment": True, "lead_volume": True, "existing_accounts": True},
     )
     fig.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), title=title, coloraxis_showscale=False)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")

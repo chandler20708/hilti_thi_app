@@ -16,42 +16,30 @@ That is too expensive for a presentation-facing Streamlit interface.
 The prototype uses:
 
 1. a Leaflet map embedded inside Streamlit
-2. a small local `aiohttp` service
-3. viewport-based requests
-4. zoom-based geometry simplification
+2. direct GeoJSON injection from the current GeoDataFrame scope
+3. client-side styling and interaction in Leaflet
+4. local view-state persistence for recentering and zoom restore
 
-This means the browser only requests district polygons that are relevant to the visible map extent.
+This means the deployed app no longer depends on a localhost backend or a separate request path for district polygons.
 
 At deployment time, the district boundary source is loaded from compressed GeoParquet in the repository `data/` folder, with legacy `.gpkg` and `.geojson` support retained as fallback.
 
 ## Request flow
 
-1. The map reads current bounds and zoom.
-2. It sends an async request to `/districts`.
-3. The service filters the UK district layer to the requested viewport.
-4. It simplifies geometry according to zoom.
-5. It returns only the filtered GeoJSON.
-6. The map redraws the current layer.
-
-## Simplification profile
-
-Current tolerances:
-
-- zoom `<= 5`: `0.05`
-- zoom `6`: `0.02`
-- zoom `7`: `0.008`
-- zoom `8`: `0.003`
-- zoom `9`: `0.0015`
-- zoom `>= 10`: `0.0005`
+1. The page filters the GeoDataFrame in Python.
+2. The filtered frame is serialized to GeoJSON.
+3. The GeoJSON is embedded directly in the Leaflet component.
+4. Leaflet paints the polygons and overlays the store markers.
+5. Zoom changes redraw the center markers locally.
 
 ## Why this was chosen
 
 This is not the most scalable GIS architecture possible, but it is the right tradeoff for the current stage:
 
 - simple enough for a coursework/demo prototype
-- fast enough to feel interactive
+- reliable in hosted Streamlit deployments
 - clear enough to explain in a presentation
-- easy to replace later with vector tiles if needed
+- easy to replace later with tiled or server-backed GIS if needed
 
 ## Future upgrades
 
