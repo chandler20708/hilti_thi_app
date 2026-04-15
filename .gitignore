@@ -21,7 +21,6 @@ htmlcov/
 .env.*
 
 # Streamlit / notebook local state
-.streamlit/
 .ipynb_checkpoints/
 
 # Generated local maps / exports
