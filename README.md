@@ -7,6 +7,7 @@ This folder now contains a manager-facing Streamlit dashboard organised around a
 - `controllers/` for filtering and page orchestration helpers
 - `services/` for the local async map API
 - `docs/` for methodology and research notes
+- `../data/` for deployable runtime data assets
 
 The app is still a prototype. The scoring logic and several commercial signals remain provisional, and some Hilti-facing metrics still rely on synthetic augmentation because of access and confidentiality limits.
 
@@ -36,7 +37,7 @@ The app now uses the standard `app.py` plus `pages/` convention:
 This is the default landing page. It is built to answer a manager question quickly:
 
 - choose a city
-- view growth opportunity or retention risk on the map
+- view growth opportunity or retention health on the map
 - compare the top 5 territories
 - open a territory action view with plain-language guidance
 
@@ -55,6 +56,17 @@ The prototype uses a hybrid data model:
 
 - observed workbook rows are preserved where they exist
 - synthetic portfolio metrics are generated for all UK districts
+- runtime data files are resolved from `../data/` first, then legacy root paths
+
+### Runtime data assets
+
+The deployable data bundle now lives in the repository-level `data/` folder:
+
+- `data/dataset2.xlsx`
+- `data/UK_postcode_districts.parquet`
+- `data/Hilti Case Study 2026.pdf`
+
+The UK district boundaries were converted from `.gpkg` to compressed GeoParquet to reduce deployment size while keeping geometry and CRS metadata intact.
 
 This gives the app national map coverage now, while still keeping the real available data visible where it already exists.
 
@@ -62,7 +74,7 @@ This gives the app national map coverage now, while still keeping the real avail
 
 - `market_opportunity_score`
 - `acquisition_opportunity`
-- `retention_risk`
+- `retention_risk` internally, surfaced as `retention_health` in the dashboard
 - `primary_segment`
 - `existing_accounts`
 - `lead_volume`
@@ -104,6 +116,18 @@ Install app-specific dependencies with:
 
 ```bash
 pip install -r hilti_thi_app/requirements.txt
+```
+
+## Streamlit Cloud deployment
+
+In the normal case, no secrets are required as long as the `data/` folder is committed with the app.
+
+If you need to override the paths in Streamlit Cloud, use TOML secrets like this:
+
+```toml
+HILTI_DATASET_PATH = "/mount/src/data/dataset2.xlsx"
+HILTI_DISTRICT_PATH = "/mount/src/data/UK_postcode_districts.parquet"
+HILTI_CASE_STUDY_PATH = "/mount/src/data/Hilti Case Study 2026.pdf"
 ```
 
 ## Next steps after the meeting
