@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pyogrio.errors import DataSourceError
 
-from config import DATASET_PATH, DISTRICT_GPKG_PATH
+from config import DATASET_PATH, DISTRICT_DATA_PATH
 from .synthetic_portfolio import build_synthetic_metrics
 
 
@@ -37,15 +37,23 @@ def load_observed_metrics() -> pd.DataFrame:
 
 @lru_cache(maxsize=1)
 def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
-    if not DISTRICT_GPKG_PATH.exists():
+    if not DISTRICT_DATA_PATH.exists():
         raise FileNotFoundError(
-            f"District geopackage not found at {DISTRICT_GPKG_PATH}. Set HILTI_DISTRICT_GPKG_PATH or place UK_postcode_districts.gpkg in the project root."
+            f"District geometry not found at {DISTRICT_DATA_PATH}. Place UK_postcode_districts.parquet in the data folder, or set HILTI_DISTRICT_PATH."
         )
     try:
-        geo = gpd.read_file(DISTRICT_GPKG_PATH).to_crs(4326)
+        if DISTRICT_DATA_PATH.suffix.lower() == ".parquet":
+            geo = gpd.read_parquet(DISTRICT_DATA_PATH)
+        else:
+            geo = gpd.read_file(DISTRICT_DATA_PATH)
+        geo = geo.set_crs(4326) if geo.crs is None else geo.to_crs(4326)
+    except (ImportError, ModuleNotFoundError) as error:
+        raise RuntimeError(
+            "Unable to read district parquet data. Ensure pyarrow is installed in the deployment environment."
+        ) from error
     except DataSourceError as error:
         raise RuntimeError(
-            f"Unable to open district geopackage at {DISTRICT_GPKG_PATH}. Confirm the file was uploaded to the deployment and is a valid .gpkg."
+            f"Unable to open district geometry at {DISTRICT_DATA_PATH}. Confirm the file was uploaded to the deployment and is a valid geopackage or parquet file."
         ) from error
     geo["PostDist"] = geo["PostDist"].astype(str).str.upper().str.strip()
 
