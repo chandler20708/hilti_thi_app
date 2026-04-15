@@ -6,7 +6,7 @@ from controllers.filters import apply_filters, get_focus_record
 from models.district_data import get_filter_options, load_prototype_geo_dataframe
 from models.scoring import score_thi
 from models.store_locations import load_hilti_store_locations
-from services.map_service import ensure_map_service
+# from services.map_service import ensure_map_service
 from views.map_component import render_leaflet_metric_map
 from views.shared import (
     METRIC_CONFIG,
@@ -23,10 +23,10 @@ def render_page() -> None:
     base = load_prototype_geo_dataframe()
     options = get_filter_options(base)
     store_locations = load_hilti_store_locations()
-    if "map_url" not in st.session_state:
-        st.session_state["map_url"] = ensure_map_service(base)
+    # if "map_url" not in st.session_state:
+        # st.session_state["map_url"] = ensure_map_service(base)
 
-    server_url = st.session_state["map_url"]
+    # server_url = st.session_state["map_url"]
 
     render_app_frame()
     city_options = options["sprawls"]
@@ -100,7 +100,7 @@ def render_page() -> None:
             st.subheader(f"{metric_meta['label']} Map")
             st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.")
             render_leaflet_metric_map(
-                server_url=server_url,
+                geojson_data=scope_frame.to_json(),
                 filters=analysis_filters,
                 metric_key=metric_key,
                 metric_label=metric_meta["label"],
