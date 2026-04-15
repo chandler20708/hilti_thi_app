@@ -7,6 +7,7 @@ The original UK district map artifacts are too heavy to embed directly:
 - `UK_map.html` is about `219 MB`
 - the raw district GeoJSON is about `194 MB`
 - even the GeoPackage is about `86 MB`
+- the compressed GeoParquet is still about `46 MB`
 
 That is too expensive for a presentation-facing Streamlit interface.
 
@@ -20,6 +21,8 @@ The prototype uses:
 4. zoom-based geometry simplification
 
 This means the browser only requests district polygons that are relevant to the visible map extent.
+
+At deployment time, the district boundary source is loaded from compressed GeoParquet in the repository `data/` folder, with legacy `.gpkg` and `.geojson` support retained as fallback.
 
 ## Request flow
 
@@ -56,5 +59,5 @@ If the app grows:
 
 1. cache responses by rounded viewport and zoom
 2. precompute zoom-band regional files
-3. move to vector tiles or GeoParquet-backed spatial queries
+3. move to spatial indexing or vector tiles instead of loading the full national boundary layer into memory
 4. add map click events back into page state
