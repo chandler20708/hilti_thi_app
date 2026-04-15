@@ -5,6 +5,7 @@ from functools import lru_cache
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from pyogrio.errors import DataSourceError
 
 from config import DATASET_PATH, DISTRICT_GPKG_PATH
 from .synthetic_portfolio import build_synthetic_metrics
@@ -25,6 +26,10 @@ def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
 
 @lru_cache(maxsize=1)
 def load_observed_metrics() -> pd.DataFrame:
+    if not DATASET_PATH.exists():
+        raise FileNotFoundError(
+            f"Dataset not found at {DATASET_PATH}. Set HILTI_DATASET_PATH or place dataset2.xlsx in the project root."
+        )
     df = pd.read_excel(DATASET_PATH)
     df["Postal District"] = df["Postal District"].astype(str).str.upper().str.strip()
     return df
@@ -32,7 +37,16 @@ def load_observed_metrics() -> pd.DataFrame:
 
 @lru_cache(maxsize=1)
 def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
-    geo = gpd.read_file(DISTRICT_GPKG_PATH).to_crs(4326)
+    if not DISTRICT_GPKG_PATH.exists():
+        raise FileNotFoundError(
+            f"District geopackage not found at {DISTRICT_GPKG_PATH}. Set HILTI_DISTRICT_GPKG_PATH or place UK_postcode_districts.gpkg in the project root."
+        )
+    try:
+        geo = gpd.read_file(DISTRICT_GPKG_PATH).to_crs(4326)
+    except DataSourceError as error:
+        raise RuntimeError(
+            f"Unable to open district geopackage at {DISTRICT_GPKG_PATH}. Confirm the file was uploaded to the deployment and is a valid .gpkg."
+        ) from error
     geo["PostDist"] = geo["PostDist"].astype(str).str.upper().str.strip()
 
     observed = load_observed_metrics().copy()
