@@ -1,7 +1,7 @@
 import streamlit as st
 
-from views.pages.market_opportunity import render_page as render_market_page
-from views.styling import APP_CSS
+from components.styling import APP_CSS
+from screens.market_opportunity import render_page as render_market_page
 
 
 st.set_page_config(

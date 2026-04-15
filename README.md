@@ -3,9 +3,9 @@
 This folder now contains a manager-facing Streamlit dashboard organised around a clearer application structure:
 
 - `models/` for data preparation and scoring logic
-- `views/` for page rendering, styling, and interactive components
+- `components/` for reusable UI pieces, styling, and map rendering
 - `controllers/` for filtering and page orchestration helpers
-- `services/` for the local async map API
+- `screens/` for full-screen render modules
 - `docs/` for methodology and research notes
 - `data/` for deployable runtime data assets
 
@@ -25,10 +25,7 @@ This version is therefore closer to a lightweight MVC-style application structur
 
 ## Streamlit approach
 
-The app now uses the standard `app.py` plus `pages/` convention:
-
-- `app.py` is the default executive dashboard entrypoint
-- `pages/` contains supporting reference pages such as methodology notes
+The app uses `Overview.py` as the main executive dashboard entrypoint and `pages/` for supporting Streamlit pages such as methodology notes.
 
 ## Pages
 
@@ -85,14 +82,12 @@ These are placeholders for demo and research framing, not the final Hilti-approv
 
 ## Map strategy
 
-The UK district boundary file is too heavy to embed as one static HTML asset. The app therefore uses:
+The UK district boundary file is too heavy to keep as raw HTML or GeoJSON assets in the repository. The app therefore uses:
 
 1. an embedded Leaflet component inside Streamlit
-2. a small local `aiohttp` service
-3. viewport-based async loading
-4. zoom-based geometry simplification
-
-That lets the dashboard behave like a real app instead of trying to ship the whole boundary set to the browser on first render.
+2. filtered GeoDataFrame scope serialized directly to GeoJSON
+3. compressed GeoParquet as the primary runtime boundary asset
+4. client-side rendering for map styling and overlays
 
 The deployed app now uses compressed GeoParquet in `data/UK_postcode_districts.parquet` as the primary runtime boundary asset.
 
@@ -106,11 +101,11 @@ See [docs/THI_PROTOTYPE_METHODOLOGY.md](./docs/THI_PROTOTYPE_METHODOLOGY.md).
 
 ## Run
 
-From the project root:
+From the app root:
 
 ```bash
 source .venv/bin/activate
-streamlit run hilti_thi_app/app.py
+streamlit run Overview.py
 ```
 
 ## Dependencies
@@ -118,7 +113,7 @@ streamlit run hilti_thi_app/app.py
 Install app-specific dependencies with:
 
 ```bash
-pip install -r hilti_thi_app/requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Streamlit Cloud deployment

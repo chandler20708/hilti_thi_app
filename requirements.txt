@@ -1,7 +1,6 @@
 # App runtime dependencies pinned to the currently working local environment.
 # These are the direct packages the Streamlit app relies on.
 
-aiohttp==3.13.3
 geopandas==1.1.3
 numpy==2.4.3
 openpyxl==3.1.5

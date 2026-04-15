@@ -8,27 +8,21 @@ import streamlit.components.v1 as components
 
 def render_leaflet_metric_map(
     geojson_data: str,
-    filters: dict[str, object],
     metric_key: str,
     metric_label: str,
     focus_record: dict[str, object] | None,
     should_refocus: bool,
     store_locations: list[dict[str, object]] | None = None,
     focus_district: str | None = None,
-    weights: dict[str, float] | None = None,
-    active_keys: list[str] | None = None,
     height: int = 720,
 ) -> None:
     map_id = f"map_{uuid4().hex}"
     state = {
-        **filters,
         "metric_key": metric_key,
         "metric_label": metric_label,
         "should_refocus": should_refocus,
         "focus_district": focus_district,
         "store_locations": store_locations or [],
-        "weights": weights or {},
-        "active_keys": active_keys or [],
     }
 
     html = f"""
@@ -172,6 +166,7 @@ def render_leaflet_metric_map(
 
         const districtLayer = L.geoJSON(null, {{
           style: styleFeature,
+          pointToLayer: pointToLayer,
           onEachFeature: onEachFeature
         }}).addTo(map);
 
@@ -207,6 +202,9 @@ def render_leaflet_metric_map(
 
         function styleFeature(feature) {{
           const p = feature.properties || {{}};
+          if (feature.geometry && feature.geometry.type === "Point") {{
+            return {{}};
+          }}
           const value = p[state.metric_key];
           if (value === null || value === undefined) {{
             return {{
@@ -217,7 +215,7 @@ def render_leaflet_metric_map(
             }};
           }}
 
-          const highlightedDistrict = state.focus_district || state.district;
+          const highlightedDistrict = state.focus_district;
           const isFocus = highlightedDistrict && highlightedDistrict !== "All" && p.post_dist === highlightedDistrict;
           return {{
             color: isFocus ? "#101828" : "#4b2e17",
@@ -225,6 +223,18 @@ def render_leaflet_metric_map(
             fillColor: colorForMetric(value),
             fillOpacity: isFocus ? 0.74 : 0.58
           }};
+        }}
+
+        function pointToLayer(feature, latlng) {{
+          const p = feature.properties || {{}};
+          const value = p[state.metric_key];
+          return L.circleMarker(latlng, {{
+            radius: map.getZoom() >= 7 ? 5 : 3.8,
+            color: "#ffffff",
+            weight: 1,
+            fillColor: value === null || value === undefined ? "#98a2b3" : colorForMetric(value),
+            fillOpacity: 0.92
+          }});
         }}
 
         function onEachFeature(feature, layer) {{
@@ -250,7 +260,11 @@ def render_leaflet_metric_map(
             storeLayer.clearLayers();
             districtLayer.addData(geojson);
 
-            if (geojson.features) {{
+            const hasPolygonGeometry = (geojson.features || []).some((feature) => {{
+              return feature.geometry && feature.geometry.type !== "Point";
+            }});
+
+            if (hasPolygonGeometry && geojson.features) {{
               geojson.features.forEach((feature) => {{
                 const p = feature.properties || {{}};
                 if (map.getZoom() >= 8 && p.center_lat && p.center_lon) {{

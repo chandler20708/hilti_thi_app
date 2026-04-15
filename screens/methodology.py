@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from views.shared import render_app_frame, render_methodology_notes
+from components.shared import render_app_frame, render_methodology_notes
 
 
 def render_page() -> None:

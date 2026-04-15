@@ -1,7 +1,7 @@
 import streamlit as st
 
-from views.pages.home import render_page as render_home_page
-from views.styling import APP_CSS
+from components.styling import APP_CSS
+from screens.methodology import render_page as render_home_page
 
 
 st.set_page_config(

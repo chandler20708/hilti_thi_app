@@ -7,8 +7,8 @@ import streamlit as st
 from controllers.filters import apply_filters, get_focus_record
 from models.district_data import load_prototype_geo_dataframe
 from models.scoring import score_thi, summarize_metric
-from views.map_component import render_leaflet_metric_map
-from views.shared import render_metric_cards, render_ranking_bar, render_thi_controls
+from components.map_component import render_leaflet_metric_map
+from components.shared import render_metric_cards, render_ranking_bar, render_thi_controls
 
 
 def render_page(filters: dict[str, object]) -> None:
@@ -47,14 +47,11 @@ def render_page(filters: dict[str, object]) -> None:
             )
             render_leaflet_metric_map(
                 geojson_data=geojson_data,
-                filters=filters,
                 metric_key="thi_score",
                 metric_label="Territorial Health Index",
                 focus_record=focus,
                 should_refocus=False,
                 focus_district=filters.get("district"),
-                weights=thi_controls["weights"],
-                active_keys=thi_controls["active_keys"],
                 height=720,
             )
             st.markdown("</div>", unsafe_allow_html=True)

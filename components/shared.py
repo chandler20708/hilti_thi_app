@@ -23,6 +23,14 @@ METRIC_CONFIG = {
 }
 
 
+def build_analysis_filters(city: str, segment: str, district: str = "All") -> dict[str, str]:
+    return {
+        "district": district,
+        "sprawl": city,
+        "segment": segment,
+    }
+
+
 def render_app_frame(
     title: str = "Hilti Territory Growth Dashboard",
     subtitle: str = "Choose a city, review the map, and focus the sales team on the territories with the strongest executive case for action.",
@@ -201,25 +209,6 @@ def render_top_territories_snapshot(df, metric_key: str) -> None:
     summary_rows[METRIC_CONFIG[metric_key]["short_label"]] = summary_rows[METRIC_CONFIG[metric_key]["short_label"]].map(lambda value: f"{value:.1f}")
     st.caption("Reference only. Use the map to browse the full city footprint.")
     st.dataframe(summary_rows, width="stretch", hide_index=True)
-
-
-def render_market_scatter(df) -> None:
-    fig = px.scatter(
-        df,
-        x="acquisition_opportunity",
-        y="retention_health",
-        size="lead_volume",
-        color="market_opportunity_score",
-        hover_name="PostDist",
-        color_continuous_scale=TRAFFIC_SCALE,
-        hover_data={
-            "primary_segment": True,
-            "existing_accounts": True,
-            "lead_volume": True,
-        },
-    )
-    fig.update_layout(height=360, margin=dict(l=10, r=10, t=10, b=10), coloraxis_showscale=False)
-    st.plotly_chart(fig, width="stretch")
 
 
 def build_territory_story(row, city_df) -> dict[str, str]:

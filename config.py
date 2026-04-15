@@ -42,5 +42,4 @@ DISTRICT_DATA_PATH = _resolve_data_path(
     ("UK_postcode_districts.parquet", "UK_postcode_districts.gpkg", "UK_postcode_districts.geojson"),
     ("HILTI_DISTRICT_PATH", "HILTI_DISTRICT_GPKG_PATH"),
 )
-DISTRICT_GPKG_PATH = DISTRICT_DATA_PATH
 CASE_STUDY_PATH = _resolve_data_path(("Hilti Case Study 2026.pdf",), ("HILTI_CASE_STUDY_PATH",))

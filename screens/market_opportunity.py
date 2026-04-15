@@ -5,13 +5,14 @@ import json
 import streamlit as st
 
 from controllers.filters import apply_filters, get_focus_record
-from models.district_data import get_filter_options, load_prototype_geo_dataframe
+from models.district_data import build_map_frame, get_filter_options, load_prototype_geo_dataframe
 from models.scoring import score_thi
 from models.store_locations import load_hilti_store_locations
-from views.map_component import render_leaflet_metric_map
-from views.shared import (
+from components.map_component import render_leaflet_metric_map
+from components.shared import (
     METRIC_CONFIG,
     render_app_frame,
+    build_analysis_filters,
     render_sidebar_controls,
     render_metric_cards,
     render_top_territories_snapshot,
@@ -40,18 +41,13 @@ def render_page() -> None:
     thi_controls = render_thi_controls(expanded=False)
     scored = score_thi(base, thi_controls["weights"], thi_controls["active_keys"])
 
-    analysis_filters = {
-        "district": "All",
-        "post_area": "All",
-        "sprawl": controls["city"],
-        "segment": controls["segment"],
-        "observed_only": False,
-    }
+    analysis_filters = build_analysis_filters(controls["city"], controls["segment"])
 
     scope_frame = apply_filters(scored, analysis_filters)
     if scope_frame.empty:
         scope_frame = scored
-    geojson_data = json.dumps(json.loads(scope_frame.to_json()))
+    map_frame = build_map_frame(scope_frame, controls["city"])
+    geojson_data = json.dumps(json.loads(map_frame.to_json()))
 
     visible_stores = store_locations
     if controls["city"] != "All":
@@ -78,13 +74,11 @@ def render_page() -> None:
     searched_territory = controls["territory"] if controls["territory"] != "All territories" else None
     selected_territory = searched_territory
 
-    focus_filters = {
-        "district": selected_territory or "All",
-        "post_area": "All",
-        "sprawl": controls["city"],
-        "segment": controls["segment"],
-        "observed_only": False,
-    }
+    focus_filters = build_analysis_filters(
+        controls["city"],
+        controls["segment"],
+        district=selected_territory or "All",
+    )
     focus = get_focus_record(base, focus_filters)
 
     geography_signature = (controls["city"], selected_territory or "All", metric_key)
@@ -92,22 +86,20 @@ def render_page() -> None:
     should_refocus = previous_signature != geography_signature
     st.session_state["market_geo_signature"] = geography_signature
 
-    left, right = st.columns([2.3, 0.7], gap="medium")
+    left, right = st.columns([2.15, 0.85], gap="medium")
     with left:
         with st.container(border=True):
             st.subheader(f"{metric_meta['label']} Map")
-            st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.")
+            overview_note = " National overview uses point mode for faster loading." if controls["city"] == "All" else ""
+            st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.{overview_note}")
             render_leaflet_metric_map(
                 geojson_data=geojson_data,
-                filters=analysis_filters,
                 metric_key=metric_key,
                 metric_label=metric_meta["label"],
                 focus_record=focus,
                 should_refocus=should_refocus,
                 store_locations=visible_stores.to_dict("records"),
                 focus_district=selected_territory,
-                weights=thi_controls["weights"],
-                active_keys=thi_controls["active_keys"],
                 height=720,
             )
 

@@ -10,6 +10,23 @@ from pyogrio.errors import DataSourceError
 from config import DATASET_PATH, DISTRICT_DATA_PATH
 from .synthetic_portfolio import build_synthetic_metrics
 
+MAP_PAYLOAD_COLUMNS = [
+    "PostDist",
+    "market_opportunity_score",
+    "retention_health",
+    "competition_pressure",
+    "primary_segment",
+    "lead_volume",
+    "existing_accounts",
+    "center_lat",
+    "center_lon",
+    "data_source",
+]
+
+MAP_PAYLOAD_RENAMES = {
+    "PostDist": "post_dist",
+}
+
 
 def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
     valid = series.dropna()
@@ -86,7 +103,28 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
 def get_filter_options(gdf: gpd.GeoDataFrame) -> dict[str, list[str]]:
     return {
         "districts": ["All"] + sorted(gdf["PostDist"].dropna().unique().tolist()),
-        "post_areas": ["All"] + sorted(gdf["PostArea"].dropna().unique().tolist()),
         "sprawls": ["All"] + sorted(gdf["Sprawl"].dropna().unique().tolist()),
         "segments": ["All"] + sorted(gdf["primary_segment"].dropna().unique().tolist()),
     }
+
+
+def build_map_frame(gdf: gpd.GeoDataFrame, city_scope: str) -> gpd.GeoDataFrame:
+    available_columns = [column for column in MAP_PAYLOAD_COLUMNS if column in gdf.columns]
+    frame = gdf.loc[:, available_columns + ["geometry"]].copy()
+    row_count = len(frame)
+
+    # National overview has to stay small enough for Streamlit Cloud message limits.
+    use_point_overview = city_scope == "All" or row_count > 900
+    if use_point_overview:
+        frame["geometry"] = frame.geometry.representative_point()
+    else:
+        if row_count > 300:
+            tolerance = 0.01
+        elif row_count > 120:
+            tolerance = 0.004
+        else:
+            tolerance = 0.0015
+        frame["geometry"] = frame.geometry.simplify(tolerance=tolerance, preserve_topology=True)
+
+    frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
+    return gpd.GeoDataFrame(frame, geometry="geometry", crs="EPSG:4326")
