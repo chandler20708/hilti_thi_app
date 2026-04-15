@@ -1,0 +1,7 @@
+streamlit>=1.55,<2.0
+pandas
+plotly
+geopandas
+pyogrio
+aiohttp
+openpyxl

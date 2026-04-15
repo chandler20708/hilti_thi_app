@@ -1,0 +1,51 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Local env / secrets
+.env
+.env.*
+
+# Streamlit / notebook local state
+.streamlit/
+.ipynb_checkpoints/
+
+# Generated local maps / exports
+UK_map.html
+data_map.html
+
+# Root-level research documents and media
+/*.pdf
+/*.docx
+/*.xlsx
+/*.jpeg
+/*.jpg
+/*.png
+/*.excalidraw
+
+# Root-level geospatial and source data artifacts
+/*.csv
+/*.geojson
+/*.gpkg
+/*.shp
+/*.shx
+/*.dbf
+
+# Optional local scratch outputs
+*.log
+tmp/
+temp/
