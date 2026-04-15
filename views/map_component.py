@@ -13,6 +13,7 @@ def render_leaflet_metric_map(
     metric_label: str,
     focus_record: dict[str, object] | None,
     should_refocus: bool,
+    store_locations: list[dict[str, object]] | None = None,
     focus_district: str | None = None,
     weights: dict[str, float] | None = None,
     active_keys: list[str] | None = None,
@@ -25,6 +26,7 @@ def render_leaflet_metric_map(
         "metric_label": metric_label,
         "should_refocus": should_refocus,
         "focus_district": focus_district,
+        "store_locations": store_locations or [],
         "weights": weights or {},
         "active_keys": active_keys or [],
     }
@@ -117,8 +119,22 @@ def render_leaflet_metric_map(
           width: 160px;
           height: 10px;
           border-radius: 999px;
-          background: linear-gradient(90deg, #60a5fa 0%, #f59e0b 50%, #b91c1c 100%);
+          background: linear-gradient(90deg, #ea4335 0%, #fbbc04 50%, #34a853 100%);
           margin: 8px 0 4px 0;
+        }}
+        .hilti-store-icon {{
+          width: 22px;
+          height: 22px;
+          border-radius: 999px;
+          background: #c8102e;
+          color: #ffffff;
+          border: 2px solid #ffffff;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.24);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font: 11px/1 sans-serif;
+          font-weight: 700;
         }}
       </style>
     </head>
@@ -134,6 +150,7 @@ def render_leaflet_metric_map(
         const state = {json.dumps(state)};
         const focus = {json.dumps(focus_record)};
         const serverUrl = {json.dumps(server_url)};
+        const storeLocations = state.store_locations || [];
         const loadingEl = document.getElementById("loading");
         const recenterBtn = document.getElementById("recenterBtn");
         const responseCache = new Map();
@@ -160,6 +177,15 @@ def render_leaflet_metric_map(
         }}).addTo(map);
 
         const markerLayer = L.layerGroup().addTo(map);
+        const storeLayer = L.layerGroup().addTo(map);
+        const storeIcon = L.divIcon({{
+          className: "",
+          html: '<div class="hilti-store-icon">H</div>',
+          iconSize: [22, 22],
+          iconAnchor: [11, 22],
+          popupAnchor: [0, -20],
+          tooltipAnchor: [0, -18]
+        }});
 
         const legend = L.control({{position: "bottomright"}});
         legend.onAdd = function() {{
@@ -175,9 +201,9 @@ def render_leaflet_metric_map(
 
         function colorForMetric(value) {{
           const t = Math.max(0, Math.min(100, Number(value))) / 100;
-          if (t < 0.34) return "#60a5fa";
-          if (t < 0.67) return "#f59e0b";
-          return "#b91c1c";
+          if (t < 0.34) return "#ea4335";
+          if (t < 0.67) return "#fbbc04";
+          return "#34a853";
         }}
 
         function styleFeature(feature) {{
@@ -209,7 +235,7 @@ def render_leaflet_metric_map(
             <div style="min-width:180px;">
               <div style="font-weight:700;margin-bottom:6px;">${{p.post_dist || "Territory"}}</div>
               <div><b>${{state.metric_label}}</b>: ${{metricValue}}</div>
-              <div><b>Retention risk</b>: ${{p.retention_risk ?? "N/A"}}</div>
+              <div><b>Retention health</b>: ${{p.retention_health ?? "N/A"}}</div>
               <div><b>Competition</b>: ${{p.competition_pressure ?? "N/A"}}</div>
               <div><b>Segment</b>: ${{p.primary_segment || "N/A"}}</div>
               <div><b>Leads</b>: ${{p.lead_volume ?? "N/A"}}</div>
@@ -272,6 +298,7 @@ def render_leaflet_metric_map(
         function paint(geojson, fromCache) {{
             districtLayer.clearLayers();
             markerLayer.clearLayers();
+            storeLayer.clearLayers();
             districtLayer.addData(geojson);
 
             if (geojson.features) {{
@@ -290,6 +317,21 @@ def render_leaflet_metric_map(
                 }}
               }});
             }}
+
+            storeLocations.forEach((store) => {{
+              if (!store.latitude || !store.longitude) return;
+              const marker = L.marker([store.latitude, store.longitude], {{icon: storeIcon}});
+              marker.bindTooltip(store.name, {{sticky: true}});
+              marker.bindPopup(`
+                <div style="min-width:190px;">
+                  <div style="font-weight:700;margin-bottom:6px;">${{store.name}}</div>
+                  <div><b>City</b>: ${{store.city}}</div>
+                  <div><b>Postcode</b>: ${{store.postcode}}</div>
+                  <div style="margin-top:8px;"><a href="${{store.url}}" target="_blank" rel="noopener noreferrer">Official store page</a></div>
+                </div>
+              `);
+              marker.addTo(storeLayer);
+            }});
 
             const count = geojson.features ? geojson.features.length : 0;
             loadingEl.textContent = (fromCache ? "Loaded from cache: " : "Loaded ") + count + " district polygons";

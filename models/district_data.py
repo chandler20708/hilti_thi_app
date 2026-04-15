@@ -49,6 +49,7 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
     synthetic_rows = merged.apply(build_synthetic_metrics, axis=1, result_type="expand")
     merged = pd.concat([merged, synthetic_rows], axis=1)
 
+    merged["retention_health"] = 100.0 - merged["retention_risk"]
     merged["market_opportunity_raw_score"] = merged["market_opportunity_score"]
     merged["market_opportunity_score"] = _percentile_skew(merged["market_opportunity_score"])
 

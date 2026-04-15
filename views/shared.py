@@ -5,6 +5,8 @@ import streamlit as st
 
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
+TRAFFIC_SCALE = ["#ea4335", "#fbbc04", "#34a853"]
+
 
 METRIC_CONFIG = {
     "market_opportunity_score": {
@@ -12,10 +14,10 @@ METRIC_CONFIG = {
         "short_label": "Growth",
         "description": "Prioritise territories with the strongest upside for new growth.",
     },
-    "retention_risk": {
-        "label": "Retention Risk",
-        "short_label": "Retention",
-        "description": "Surface territories where account retention pressure is most elevated.",
+    "retention_health": {
+        "label": "Retention Health",
+        "short_label": "Health",
+        "description": "Highlight territories with stronger customer retention health and resilience.",
     },
 }
 
@@ -29,7 +31,7 @@ def render_app_frame(
         <div class="hero">
           <h1>{title}</h1>
           <div class="muted">{subtitle}</div>
-          <div class="hero-meta"><strong>Team Members</strong>: Ashmi Fathima, Akash Somasundaran, Chia-Te Liu, Muhammad Raahim Sohail, Qutaybah Al Owaifeer, Wei-An Chen, Yi-Rou Lu</div>
+          <div class="hero-meta"><strong>Team Members</strong>: Chia-Te Liu, Ashmi Fathima, Hong Anh Bui, Prajna Ravi, Akash Somasundaran</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -47,6 +49,8 @@ def render_sidebar_controls(
         st.markdown("### Controls")
         if st.session_state.get("sidebar_city") not in city_options:
             st.session_state["sidebar_city"] = default_city_value
+        if st.session_state.get("sidebar_metric_key") not in METRIC_CONFIG:
+            st.session_state["sidebar_metric_key"] = "market_opportunity_score"
         city = st.selectbox(
             "City",
             options=city_options,
@@ -151,11 +155,11 @@ def render_market_scatter(df) -> None:
     fig = px.scatter(
         df,
         x="acquisition_opportunity",
-        y="retention_risk",
+        y="retention_health",
         size="lead_volume",
         color="market_opportunity_score",
         hover_name="PostDist",
-        color_continuous_scale=["#60a5fa", "#f59e0b", "#b91c1c"],
+        color_continuous_scale=TRAFFIC_SCALE,
         hover_data={
             "primary_segment": True,
             "existing_accounts": True,
@@ -222,7 +226,7 @@ def render_territory_detail(row, city_df) -> None:
           <h3>{row["PostDist"]}</h3>
           <div class="detail-grid">
             <div><span>Growth Opportunity</span><strong>{row["market_opportunity_score"]:.1f}</strong></div>
-            <div><span>Retention Risk</span><strong>{row["retention_risk"]:.1f}</strong></div>
+            <div><span>Retention Health</span><strong>{row["retention_health"]:.1f}</strong></div>
             <div><span>Competition Pressure</span><strong>{row["competition_pressure"]:.1f}</strong></div>
             <div><span>Primary Sales Emphasis</span><strong>{row["primary_segment"]}</strong></div>
           </div>
@@ -240,42 +244,39 @@ def render_territory_detail(row, city_df) -> None:
 
 
 def render_methodology_notes() -> None:
-    st.markdown('<div class="shell">', unsafe_allow_html=True)
-    st.subheader("How To Read This Dashboard")
-    st.write(
-        "This executive view is designed to help Hilti managers find the territories with the strongest growth case inside a selected city. The map and ranking are the primary decision tools, while advanced scoring stays collapsed unless an expert wants to explain the model."
-    )
-    st.write(
-        "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. That detail is intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.subheader("How To Read This Dashboard")
+        st.write(
+            "This executive view is designed to help Hilti managers find the territories with the strongest growth case inside a selected city. The map and ranking are the primary decision tools, while advanced scoring stays collapsed unless an expert wants to explain the model."
+        )
+        st.write(
+            "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. That detail is intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."
+        )
 
     left, right = st.columns(2, gap="large")
     with left:
-        st.markdown('<div class="shell">', unsafe_allow_html=True)
-        st.subheader("Current Design Choices")
-        st.write(
-            """
-            - City is the primary entry point for review.
-            - Territory is the main unit of decision-making.
-            - Growth opportunity and retention risk are both visible.
-            - Advanced scoring remains available but collapsed by default.
-            - The main page is built as an executive dashboard, not a research sandbox.
-            """
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.subheader("Current Design Choices")
+            st.write(
+                """
+                - City is the primary entry point for review.
+                - Territory is the main unit of decision-making.
+                - Growth opportunity and retention health are both visible.
+                - Advanced scoring remains available but collapsed by default.
+                - The main page is built as an executive dashboard, not a research sandbox.
+                """
+            )
     with right:
-        st.markdown('<div class="shell">', unsafe_allow_html=True)
-        st.subheader("Known Prototype Limits")
-        st.write(
-            """
-            - Competition and commercial emphasis are still proxy metrics.
-            - Product-category recommendations are derived from segment fit, not direct product data.
-            - The scoring model is still provisional and should be validated after stakeholder review.
-            - Synthetic augmentation remains in the model even though it is less visible in the executive flow.
-            """
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.subheader("Known Prototype Limits")
+            st.write(
+                """
+                - Competition and commercial emphasis are still proxy metrics.
+                - Product-category recommendations are derived from segment fit, not direct product data.
+                - The scoring model is still provisional and should be validated after stakeholder review.
+                - Synthetic augmentation remains in the model even though it is less visible in the executive flow.
+                """
+            )
 
 
 def render_ranking_bar(df, metric_key: str, title: str) -> None:
@@ -285,7 +286,7 @@ def render_ranking_bar(df, metric_key: str, title: str) -> None:
         x="PostDist",
         y=metric_key,
         color=metric_key,
-        color_continuous_scale=["#60a5fa", "#f59e0b", "#b91c1c"],
+        color_continuous_scale=TRAFFIC_SCALE,
         hover_data={"primary_segment": True, "lead_volume": True, "existing_accounts": True},
     )
     fig.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), title=title, coloraxis_showscale=False)

@@ -5,6 +5,7 @@ import streamlit as st
 from controllers.filters import apply_filters, get_focus_record
 from models.district_data import get_filter_options, load_prototype_geo_dataframe
 from models.scoring import score_thi
+from models.store_locations import load_hilti_store_locations
 from services.map_service import ensure_map_service
 from views.map_component import render_leaflet_metric_map
 from views.shared import (
@@ -21,6 +22,7 @@ from views.shared import (
 def render_page() -> None:
     base = load_prototype_geo_dataframe()
     options = get_filter_options(base)
+    store_locations = load_hilti_store_locations()
     server_url = ensure_map_service(base)
 
     render_app_frame()
@@ -50,21 +52,26 @@ def render_page() -> None:
     if scope_frame.empty:
         scope_frame = scored
 
+    visible_stores = store_locations
+    if controls["city"] != "All":
+        visible_stores = store_locations.loc[store_locations["city"] == controls["city"]]
+
     metric_key = controls["metric_key"]
     metric_meta = METRIC_CONFIG[metric_key]
     top_priority = scope_frame.sort_values(metric_key, ascending=False).head(1)
     top_territory = top_priority.iloc[0]["PostDist"] if not top_priority.empty else "N/A"
     avg_growth = float(scope_frame["market_opportunity_score"].mean()) if not scope_frame.empty else 0.0
-    avg_retention = float(scope_frame["retention_risk"].mean()) if not scope_frame.empty else 0.0
+    avg_retention = float(scope_frame["retention_health"].mean()) if not scope_frame.empty else 0.0
 
     render_metric_cards(
         [
             ("City in focus", controls["city"], "Primary executive review area"),
             ("Average growth opportunity", f"{avg_growth:.1f}", "Current city-wide territory average"),
-            ("Average retention risk", f"{avg_retention:.1f}", "Higher values mean more pressure"),
+            ("Average retention health", f"{avg_retention:.1f}", "Higher values mean stronger retention health"),
             ("Top priority territory", top_territory, f"Highest {metric_meta['short_label'].lower()} signal in scope"),
         ]
     )
+    st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
 
     searched_territory = controls["territory"] if controls["territory"] != "All territories" else None
     selected_territory = searched_territory
@@ -85,22 +92,22 @@ def render_page() -> None:
 
     left, right = st.columns([1.7, 1], gap="large")
     with left:
-        st.markdown('<div class="shell">', unsafe_allow_html=True)
-        st.subheader(f"{metric_meta['label']} Map")
-        st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.")
-        render_leaflet_metric_map(
-            server_url=server_url,
-            filters=analysis_filters,
-            metric_key=metric_key,
-            metric_label=metric_meta["label"],
-            focus_record=focus,
-            should_refocus=should_refocus,
-            focus_district=selected_territory,
-            weights=thi_controls["weights"],
-            active_keys=thi_controls["active_keys"],
-            height=720,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.subheader(f"{metric_meta['label']} Map")
+            st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.")
+            render_leaflet_metric_map(
+                server_url=server_url,
+                filters=analysis_filters,
+                metric_key=metric_key,
+                metric_label=metric_meta["label"],
+                focus_record=focus,
+                should_refocus=should_refocus,
+                store_locations=visible_stores.to_dict("records"),
+                focus_district=selected_territory,
+                weights=thi_controls["weights"],
+                active_keys=thi_controls["active_keys"],
+                height=720,
+            )
 
     selected_row = None
     if selected_territory:
@@ -109,15 +116,13 @@ def render_page() -> None:
             selected_row = match.iloc[0]
 
     with right:
-        st.markdown('<div class="shell">', unsafe_allow_html=True)
-        st.subheader("Territory Action View")
-        if selected_row is not None:
-            render_territory_detail(selected_row, scope_frame)
-        else:
-            st.info("Use the sidebar territory search to focus the map on a specific territory and open its executive summary.")
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.subheader("Territory Action View")
+            if selected_row is not None:
+                render_territory_detail(selected_row, scope_frame)
+            else:
+                st.info("Use the sidebar territory search to focus the map on a specific territory and open its executive summary.")
 
-        st.markdown('<div class="shell">', unsafe_allow_html=True)
-        st.subheader(f"Top 5 {metric_meta['label']} Territories")
-        render_top_territories_snapshot(scope_frame, metric_key)
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.subheader(f"Top 5 {metric_meta['label']} Territories")
+            render_top_territories_snapshot(scope_frame, metric_key)

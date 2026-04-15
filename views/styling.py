@@ -36,6 +36,22 @@ APP_CSS = """
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
   }
 
+  div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(16, 24, 40, 0.08) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
+    padding: 0.35rem 0.5rem;
+  }
+
+  div[data-testid="stVerticalBlockBorderWrapper"] > div {
+    background: transparent;
+  }
+
+  .section-gap {
+    height: 1rem;
+  }
+
   .control-shell {
     background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
     border: 1px solid rgba(16, 24, 40, 0.08);
