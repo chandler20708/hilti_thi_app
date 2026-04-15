@@ -66,7 +66,15 @@ APP_CSS = """
     border: 1px solid rgba(16, 24, 40, 0.08);
     border-radius: 16px;
     padding: 1rem;
-    min-height: 124px;
+    min-height: 140px;          /* 👈 more space */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;  /* 👈 pushes chart to bottom */
+  }
+
+  .metric-spark {
+    margin-top: 0.5rem;
+    opacity: 0.7;
   }
 
   .metric-label { color: #475467; font-size: 0.9rem; margin-bottom: 0.4rem; }

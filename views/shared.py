@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
@@ -122,9 +123,51 @@ def render_thi_controls(expanded: bool = False) -> dict[str, object]:
 
     return {"active_keys": active_keys, "weights": weights}
 
+def _render_mini_distribution(values):
+    if len(values) == 0:
+        return
 
-def render_metric_cards(metric_payload: list[tuple[str, str, str]]) -> None:
+    mean_val = values.mean()
+
+    fig = go.Figure()
+
+    # distribution
+    fig.add_trace(go.Histogram(
+        x=values,
+        nbinsx=20,
+        marker=dict(color="rgba(120,140,160,0.18)"),
+    ))
+
+    # mean marker (THIS is the key for interpretation)
+    fig.add_vline(
+        x=mean_val,
+        line_width=2,
+        line_color="rgba(16,24,40,0.5)"
+    )
+
+    fig.update_layout(
+        height=30,
+        margin=dict(l=0, r=0, t=0, b=0),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config={"displayModeBar": False}
+    )
+    st.markdown(
+        '<div style="margin-top:-8px;"></div>',
+        unsafe_allow_html=True
+    )
+
+
+def render_metric_cards(metric_payload, scope_frame=None) -> None:
     columns = st.columns(len(metric_payload), gap="medium")
+
     for column, (label, value, subtext) in zip(columns, metric_payload):
         with column:
             st.markdown(
@@ -138,6 +181,15 @@ def render_metric_cards(metric_payload: list[tuple[str, str, str]]) -> None:
                 unsafe_allow_html=True,
             )
 
+            # --- Mini distribution for growth ---
+            if scope_frame is not None:
+                if label == "Average growth opportunity":
+                    values = scope_frame["market_opportunity_score"].dropna()
+                    _render_mini_distribution(values)
+
+                elif label == "Average retention health":
+                    values = scope_frame["retention_health"].dropna()
+                    _render_mini_distribution(values)
 
 def render_top_territories_snapshot(df, metric_key: str) -> None:
     ranking = df.sort_values(metric_key, ascending=False).head(5).copy()

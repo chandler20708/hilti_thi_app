@@ -69,7 +69,8 @@ def render_page() -> None:
             ("Average growth opportunity", f"{avg_growth:.1f}", "Current city-wide territory average"),
             ("Average retention health", f"{avg_retention:.1f}", "Higher values mean stronger retention health"),
             ("Top priority territory", top_territory, f"Highest {metric_meta['short_label'].lower()} signal in scope"),
-        ]
+        ],
+        scope_frame=scope_frame
     )
     st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
 
