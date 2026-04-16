@@ -177,6 +177,7 @@ def render_leaflet_metric_map(
         const loadingEl = document.getElementById("loading");
         const recenterBtn = document.getElementById("recenterBtn");
         const responseCache = new Map();
+        const responseCacheMaxEntries = 12;
         const storageKey = "hilti_market_map_state_" + state.metric_key;
         const defaultBounds = [[49.8, -8.2], [60.9, 2.2]];
 
@@ -337,11 +338,65 @@ def render_leaflet_metric_map(
           return tiles;
         }}
 
-        function trimResponseCache() {{
-          while (responseCache.size > 20) {{
-            const firstKey = responseCache.keys().next().value;
-            responseCache.delete(firstKey);
+        function viewportMeta(bounds, zoom) {{
+          const center = bounds.getCenter();
+          return {{
+            centerLat: center.lat,
+            centerLng: center.lng,
+            zoom: zoom
+          }};
+        }}
+
+        function shouldCacheResponse(payload, zoom) {{
+          const count = payload && payload.features ? payload.features.length : 0;
+          if (zoom <= 5 && count > 1800) return false;
+          return true;
+        }}
+
+        function responseCachePenalty(entry, bounds, zoom) {{
+          const center = bounds.getCenter();
+          const latPenalty = Math.abs((entry.centerLat || 0) - center.lat);
+          const lngPenalty = Math.abs((entry.centerLng || 0) - center.lng);
+          const distancePenalty = Math.sqrt((latPenalty * latPenalty) + (lngPenalty * lngPenalty));
+          const zoomPenalty = Math.abs((entry.zoom || 0) - zoom) * 6;
+          const agePenalty = Math.min((Date.now() - (entry.lastUsed || 0)) / 15000, 12);
+          const featurePenalty = Math.min((entry.featureCount || 0) / 800, 8);
+          return distancePenalty * (zoom >= 8 ? 18 : 8) + zoomPenalty + agePenalty + featurePenalty;
+        }}
+
+        function trimResponseCache(bounds, zoom) {{
+          if (responseCache.size <= responseCacheMaxEntries) return;
+          const ranked = Array.from(responseCache.entries()).map(([key, entry]) => {{
+            return {{ key, penalty: responseCachePenalty(entry, bounds, zoom) }};
+          }});
+          ranked.sort((a, b) => b.penalty - a.penalty);
+          while (responseCache.size > responseCacheMaxEntries && ranked.length) {{
+            const evict = ranked.shift();
+            responseCache.delete(evict.key);
           }}
+        }}
+
+        function getCachedResponse(key) {{
+          const entry = responseCache.get(key);
+          if (!entry) return null;
+          entry.lastUsed = Date.now();
+          responseCache.delete(key);
+          responseCache.set(key, entry);
+          return entry.payload;
+        }}
+
+        function setCachedResponse(key, payload, bounds, zoom) {{
+          if (!shouldCacheResponse(payload, zoom)) return;
+          const meta = viewportMeta(bounds, zoom);
+          responseCache.set(key, {{
+            payload: payload,
+            centerLat: meta.centerLat,
+            centerLng: meta.centerLng,
+            zoom: zoom,
+            featureCount: payload && payload.features ? payload.features.length : 0,
+            lastUsed: Date.now()
+          }});
+          trimResponseCache(bounds, zoom);
         }}
 
         function mergeFeatureCollection(target, part, seen) {{
@@ -433,7 +488,7 @@ def render_leaflet_metric_map(
           const fullKey = buildQueryFromBounds(bounds, zoom);
 
           try {{
-            const cached = responseCache.get(fullKey);
+            const cached = getCachedResponse(fullKey);
             if (cached && myToken === apiRequestToken) {{
               paint(cached, true);
               return;
@@ -446,8 +501,7 @@ def render_leaflet_metric_map(
               if (!response.ok) throw new Error("HTTP " + response.status);
               const payload = await response.json();
               if (myToken !== apiRequestToken) return;
-              responseCache.set(fullKey, payload);
-              trimResponseCache();
+              setCachedResponse(fullKey, payload, bounds, zoom);
               paint(payload, false);
               return;
             }}
@@ -470,8 +524,7 @@ def render_leaflet_metric_map(
               }}
             }}
             if (myToken !== apiRequestToken) return;
-            responseCache.set(fullKey, merged);
-            trimResponseCache();
+            setCachedResponse(fullKey, merged, bounds, zoom);
             paint(merged, false);
           }} catch (error) {{
             if (error.name === "AbortError") return;

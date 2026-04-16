@@ -14,7 +14,7 @@ from .filter_cache import get_filtered_geo_dataframe
 from .geojson import geojson_bytes_from_frame
 from .profiling import RequestProfile
 from .query_cache import BytesTTLCache
-from config import API_CORS_ORIGINS
+from config import API_CORS_ORIGINS, env_float, env_int
 from models.district_data import build_api_map_frame, load_prototype_geo_dataframe
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
@@ -24,8 +24,13 @@ from .spatial import clip_to_bounds
 
 app = FastAPI(title="Hilti Territory Map API")
 
-# Tight defaults for 512MB hosts: bigger hit rate without storing giant payloads.
-_DISTRICTS_CACHE = BytesTTLCache(max_entries=30, ttl_seconds=120.0, max_entry_bytes=1_400_000)
+# Tight defaults for 512MB hosts: keep the response cache bounded and biased
+# toward smaller, recently reused viewport payloads rather than many large bodies.
+_DISTRICTS_CACHE = BytesTTLCache(
+    max_entries=env_int("HILTI_DISTRICTS_CACHE_MAX_ENTRIES", 18),
+    ttl_seconds=env_float("HILTI_DISTRICTS_CACHE_TTL_SECONDS", 90.0),
+    max_entry_bytes=env_int("HILTI_DISTRICTS_CACHE_MAX_ENTRY_BYTES", 1_100_000),
+)
 
 
 def _allowed_origins() -> list[str]:

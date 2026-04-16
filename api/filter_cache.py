@@ -6,12 +6,13 @@ from typing import Any
 
 import geopandas as gpd
 
+from config import env_int
 from controllers.filters import build_filter_mask
 from .profiling import RequestProfile
 
 _LOCK = threading.Lock()
 _CACHE: OrderedDict[tuple[Any, ...], gpd.GeoDataFrame] = OrderedDict()
-_MAX_ENTRIES = 8
+_MAX_ENTRIES = env_int("HILTI_FILTER_CACHE_MAX_ENTRIES", 6)
 
 
 def get_filtered_geo_dataframe(

@@ -13,6 +13,7 @@ from mapbox_vector_tile import encode
 from mapbox_vector_tile.encoder import on_invalid_geometry_ignore
 from starlette.concurrency import run_in_threadpool
 
+from config import env_int
 from controllers.filters import apply_filters
 from models.district_data import GEOM_MAP_LOW, GEOM_MAP_MID, build_api_map_frame
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
@@ -38,7 +39,7 @@ def get_mvt_base() -> gpd.GeoDataFrame:
 
 _MVT_CACHE: dict[str, bytes] = {}
 _MVT_CACHE_ORDER: list[str] = []
-_MVT_MAX = 180
+_MVT_MAX = env_int("HILTI_MVT_CACHE_MAX_ENTRIES", 96)
 
 
 def _mvt_cache_get(key: str) -> bytes | None:
