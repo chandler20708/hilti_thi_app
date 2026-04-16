@@ -4,16 +4,17 @@ import geopandas as gpd
 
 
 def apply_filters(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> gpd.GeoDataFrame:
-    filtered = gdf.copy()
-
+    """Narrow the frame; returns the same object when no filters apply (saves a full copy)."""
+    out: gpd.GeoDataFrame = gdf
     if filters.get("sprawl") and filters["sprawl"] != "All":
-        filtered = filtered.loc[filtered["Sprawl"] == filters["sprawl"]]
+        out = out.loc[out["Sprawl"] == filters["sprawl"]]
     if filters.get("district") and filters["district"] != "All":
-        filtered = filtered.loc[filtered["PostDist"] == filters["district"]]
+        out = out.loc[out["PostDist"] == filters["district"]]
     if filters.get("segment") and filters["segment"] != "All":
-        filtered = filtered.loc[filtered["primary_segment"] == filters["segment"]]
-
-    return filtered
+        out = out.loc[out["primary_segment"] == filters["segment"]]
+    if out is gdf:
+        return gdf
+    return out.copy()
 
 
 def get_focus_record(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> dict[str, object] | None:

@@ -263,14 +263,14 @@ def render_leaflet_metric_map(
           `, {{sticky: true}});
         }}
 
-        function buildQuery() {{
-          const bounds = map.getBounds();
+        function buildQueryFromBounds(bounds, zoomOverride) {{
+          const z = zoomOverride != null ? zoomOverride : map.getZoom();
           const params = new URLSearchParams();
           params.set("west", bounds.getWest().toFixed(6));
           params.set("south", bounds.getSouth().toFixed(6));
           params.set("east", bounds.getEast().toFixed(6));
           params.set("north", bounds.getNorth().toFixed(6));
-          params.set("zoom", String(map.getZoom()));
+          params.set("zoom", String(z));
 
           if (state.post_area && state.post_area !== "All") params.set("post_area", state.post_area);
           if (state.sprawl && state.sprawl !== "All") params.set("sprawl", state.sprawl);
@@ -286,6 +286,54 @@ def render_leaflet_metric_map(
             }});
           }}
           return `${{apiBaseUrl}}/districts?${{params.toString()}}`;
+        }}
+
+        function chunkGridForZoom(z) {{
+          if (z <= 4) return {{ cols: 3, rows: 2 }};
+          if (z <= 7) return {{ cols: 2, rows: 2 }};
+          return {{ cols: 1, rows: 1 }};
+        }}
+
+        function chunkTileBounds(bounds, cols, rows) {{
+          const w = bounds.getWest();
+          const s = bounds.getSouth();
+          const e = bounds.getEast();
+          const n = bounds.getNorth();
+          const dx = (e - w) / cols;
+          const dy = (n - s) / rows;
+          const padW = Math.max(0.0005, dx * 0.05);
+          const padH = Math.max(0.0005, dy * 0.05);
+          const tiles = [];
+          for (let r = 0; r < rows; r++) {{
+            for (let c = 0; c < cols; c++) {{
+              const tw = w + c * dx - padW;
+              const te = w + (c + 1) * dx + padW;
+              const ts = s + r * dy - padH;
+              const tn = s + (r + 1) * dy + padH;
+              tiles.push(L.latLngBounds([ts, tw], [tn, te]));
+            }}
+          }}
+          return tiles;
+        }}
+
+        function trimResponseCache() {{
+          while (responseCache.size > 20) {{
+            const firstKey = responseCache.keys().next().value;
+            responseCache.delete(firstKey);
+          }}
+        }}
+
+        let apiRequestToken = 0;
+        let apiAbort = null;
+        let refreshDebounce = null;
+
+        function scheduleRefreshFromApi() {{
+          if (!apiBaseUrl) return;
+          if (refreshDebounce) clearTimeout(refreshDebounce);
+          refreshDebounce = setTimeout(() => {{
+            refreshDebounce = null;
+            refreshFromApi();
+          }}, 240);
         }}
 
         function paint(geojson, fromRefresh) {{
@@ -336,24 +384,64 @@ def render_leaflet_metric_map(
         }}
 
         async function refreshFromApi() {{
+          if (!apiBaseUrl) return;
+          if (apiAbort) apiAbort.abort();
+          apiAbort = new AbortController();
+          const signal = apiAbort.signal;
+          apiRequestToken += 1;
+          const myToken = apiRequestToken;
+
+          const bounds = map.getBounds();
+          const zoom = map.getZoom();
+          const fullKey = buildQueryFromBounds(bounds, zoom);
+
           try {{
-            const query = buildQuery();
-            const cached = responseCache.get(query);
-            if (cached) {{
+            const cached = responseCache.get(fullKey);
+            if (cached && myToken === apiRequestToken) {{
               paint(cached, true);
               return;
             }}
 
-            loadingEl.textContent = "Loading map data…";
-            const response = await fetch(query);
-            const payload = await response.json();
-            responseCache.set(query, payload);
-            if (responseCache.size > 24) {{
-              const firstKey = responseCache.keys().next().value;
-              responseCache.delete(firstKey);
+            const grid = chunkGridForZoom(zoom);
+            if (grid.cols === 1 && grid.rows === 1) {{
+              loadingEl.textContent = "Loading map data…";
+              const response = await fetch(fullKey, {{ signal }});
+              if (!response.ok) throw new Error("HTTP " + response.status);
+              const payload = await response.json();
+              if (myToken !== apiRequestToken) return;
+              responseCache.set(fullKey, payload);
+              trimResponseCache();
+              paint(payload, false);
+              return;
             }}
-            paint(payload, false);
+
+            const tiles = chunkTileBounds(bounds, grid.cols, grid.rows);
+            const merged = {{ type: "FeatureCollection", features: [] }};
+            const seen = new Set();
+            for (let i = 0; i < tiles.length; i++) {{
+              if (myToken !== apiRequestToken) return;
+              loadingEl.textContent = `Loading map data… (${{i + 1}}/${{tiles.length}})`;
+              const url = buildQueryFromBounds(tiles[i], zoom);
+              const response = await fetch(url, {{ signal }});
+              if (!response.ok) throw new Error("HTTP " + response.status);
+              const part = await response.json();
+              const feats = part && part.features ? part.features : [];
+              for (let j = 0; j < feats.length; j++) {{
+                const f = feats[j];
+                const id = f.properties && f.properties.post_dist;
+                if (id) {{
+                  if (seen.has(id)) continue;
+                  seen.add(id);
+                }}
+                merged.features.push(f);
+              }}
+            }}
+            if (myToken !== apiRequestToken) return;
+            responseCache.set(fullKey, merged);
+            trimResponseCache();
+            paint(merged, false);
           }} catch (error) {{
+            if (error.name === "AbortError") return;
             loadingEl.textContent = "Map request failed";
             console.error(error);
           }}
@@ -400,21 +488,13 @@ def render_leaflet_metric_map(
 
         map.on("moveend", () => {{
           saveViewState();
+          if (apiBaseUrl) scheduleRefreshFromApi();
         }});
 
         map.on("zoomend", () => {{
           saveViewState();
-          if (apiBaseUrl) {{
-            refreshFromApi();
-          }} else {{
-            paint(geojson, true);
-          }}
-        }});
-
-        map.on("moveend", () => {{
-          if (apiBaseUrl) {{
-            refreshFromApi();
-          }}
+          if (apiBaseUrl) scheduleRefreshFromApi();
+          else paint(geojson, true);
         }});
 
         recenterBtn.addEventListener("click", recenterToTarget);

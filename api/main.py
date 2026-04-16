@@ -17,7 +17,8 @@ from models.scoring import DEFAULT_WEIGHTS, factor_catalog, score_thi
 
 app = FastAPI(title="Hilti Territory Map API")
 
-_DISTRICTS_CACHE = BytesTTLCache(max_entries=40, ttl_seconds=90.0, max_entry_bytes=4_500_000)
+# Tight defaults for 512MB hosts: fewer/lighter cached bodies than before.
+_DISTRICTS_CACHE = BytesTTLCache(max_entries=10, ttl_seconds=45.0, max_entry_bytes=1_400_000)
 
 
 def _allowed_origins() -> list[str]:

@@ -157,7 +157,7 @@ The workflow `.github/workflows/keep-warm.yml` runs on a cron schedule and **GET
 
 Scheduled workflows only run on the **default** branch and GitHub may **disable** them after long repository inactivity; re-enable under **Actions** if needed.
 
-The FastAPI service also **caches identical `/districts` query strings** for about 90 seconds (bounded memory) and enables **gzip** for JSON responses to reduce transfer time.
+The FastAPI service **caches identical `/districts` query strings** briefly (small entry cap for 512MB plans) and enables **gzip** for JSON responses. The browser map **tiles large viewports** at low zoom (sequential bbox chunks, abort + debounce on pan) so each request stays smaller in memory.
 
 ## Next steps after the meeting
 
