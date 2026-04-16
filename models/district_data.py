@@ -120,8 +120,12 @@ def build_map_frame(gdf: gpd.GeoDataFrame, city_scope: str) -> gpd.GeoDataFrame:
     if use_point_overview:
         frame["geometry"] = frame.geometry.representative_point()
     else:
-        if row_count > 300:
-            tolerance = 0.01
+        if row_count > 700:
+            tolerance = 0.018
+        elif row_count > 400:
+            tolerance = 0.012
+        elif row_count > 220:
+            tolerance = 0.006
         elif row_count > 120:
             tolerance = 0.004
         else:
@@ -146,14 +150,38 @@ def map_simplification_tolerance(zoom: int) -> float:
     return 0.0005
 
 
+def _api_tolerance_cap(zoom: int) -> float:
+    """Max simplify tolerance (degrees, WGS84) allowed at this zoom before we clip."""
+    if zoom <= 4:
+        return 0.36
+    if zoom <= 5:
+        return 0.32
+    if zoom <= 6:
+        return 0.28
+    if zoom <= 7:
+        return 0.22
+    if zoom <= 8:
+        return 0.14
+    return 0.10
+
+
 def _api_polygon_tolerance(zoom: int, row_count: int) -> float:
-    """Coarser simplification when many districts are in view (e.g. UK-wide API calls)."""
+    """Strong LOD: coarser shapes when many districts are in view or zoom is low."""
     base = map_simplification_tolerance(zoom)
-    if row_count <= 120:
-        return base
-    excess = row_count - 120
-    scale = 1.0 + min(14.0, excess / 140.0)
-    return min(0.22, base * scale)
+    # Low zoom: extra coarseness so country-scale views stay small without chunking.
+    if zoom <= 5:
+        base *= 1.45
+    elif zoom <= 6:
+        base *= 1.22
+    elif zoom <= 7 and row_count > 350:
+        base *= 1.12
+
+    if row_count <= 80:
+        return min(_api_tolerance_cap(zoom), base)
+
+    excess = row_count - 80
+    scale = 1.0 + min(20.0, excess / 105.0)
+    return min(_api_tolerance_cap(zoom), base * scale)
 
 
 def build_api_map_frame(
@@ -180,9 +208,9 @@ def build_api_map_frame(
     available_columns = [column for column in export_columns if column in gdf.columns]
     frame = gdf.loc[:, available_columns + ["geometry"]].copy()
     row_count = len(frame)
-    # Prefer filled polygons (like city-scoped views). Only fall back to centroids when
-    # the feature count is so high that even aggressive simplification risks timeouts.
-    use_point_overview = row_count > 3200
+    # Prefer filled polygons; centroids only when counts stay extreme at low zoom even
+    # after the strongest simplify caps above.
+    use_point_overview = row_count > 3800 or (zoom <= 5 and row_count > 2600)
     if use_point_overview:
         frame["geometry"] = frame.geometry.representative_point()
     else:
