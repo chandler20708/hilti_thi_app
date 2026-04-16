@@ -17,6 +17,7 @@ from controllers.filters import apply_filters
 from models.district_data import GEOM_MAP_LOW, GEOM_MAP_MID, build_api_map_frame
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
+from .profiling import RequestProfile
 from .scoring_cache import get_scored_geo_dataframe
 from .spatial import clip_to_bounds
 
@@ -77,7 +78,7 @@ def _parse_active_keys(active: str) -> list[str]:
 def _geom_column_for_tile(z: int) -> str | None:
     if z <= 6:
         return GEOM_MAP_LOW
-    if z <= 10:
+    if z <= 11:
         return GEOM_MAP_MID
     return None
 
@@ -119,7 +120,22 @@ async def district_vector_tile(
     w_gii: Annotated[float | None, Query()] = None,
     w_pis: Annotated[float | None, Query()] = None,
 ) -> Response:
+    profile = RequestProfile(
+        "/tiles",
+        params={
+            "z": z,
+            "x": x,
+            "y": y,
+            "post_area": post_area,
+            "sprawl": sprawl,
+            "district": district,
+            "segment": segment,
+            "active": active,
+        },
+    )
     if z < 0 or z > 14 or x < 0 or y < 0:
+        profile.set_summary(cache_hit=False, result_rows=0)
+        profile.finish(response_bytes=0)
         return _tile_response(b"")
 
     tile = mercantile.Tile(x, y, z)
@@ -127,14 +143,23 @@ async def district_vector_tile(
     xy = mercantile.xy_bounds(tile)
     quant = (xy.left, xy.bottom, xy.right, xy.top)
 
-    weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
+    with profile.stage("query_parse") as stage:
+        weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
+        active_keys = _parse_active_keys(active)
+        stage.update_meta(weights=weights, active_key_count=len(active_keys))
     cache_key = (
         f"{z}:{x}:{y}:{post_area}:{sprawl}:{district}:{segment}:{active}:"
         f"{weights['mps']:.4f}:{weights['cas']:.4f}:{weights['cps']:.4f}:{weights['gii']:.4f}:{weights['pis']:.4f}"
     )
-    hit = _mvt_cache_get(cache_key)
+    with profile.stage("mvt_cache_lookup") as stage:
+        hit = _mvt_cache_get(cache_key)
+        stage.update_meta(cache_key=cache_key)
     if hit is not None:
+        profile.cache("mvt_cache", "hit", bytes=len(hit))
+        profile.set_summary(cache_hit=True)
+        profile.finish(response_bytes=len(hit))
         return _tile_response(hit)
+    profile.cache("mvt_cache", "miss")
 
     body = await run_in_threadpool(
         _build_tile_body,
@@ -148,11 +173,14 @@ async def district_vector_tile(
         sprawl,
         district,
         segment,
-        active,
+        active_keys,
         weights,
+        profile,
     )
     if len(body) < 900_000:
         _mvt_cache_set(cache_key, body)
+    profile.set_summary(cache_hit=False)
+    profile.finish(response_bytes=len(body))
     return _tile_response(body)
 
 
@@ -167,59 +195,78 @@ def _build_tile_body(
     sprawl: str,
     district: str,
     segment: str,
-    active: str,
+    active_keys: list[str],
     weights: dict[str, float],
+    profile: RequestProfile | None = None,
 ) -> bytes:
+    profile = profile or RequestProfile("/tiles-build", enabled=False)
     base = get_mvt_base()
-    active_keys = _parse_active_keys(active)
-    scored = get_scored_geo_dataframe(base, weights, active_keys)
-    filtered = apply_filters(
-        scored,
-        {"post_area": post_area, "sprawl": sprawl, "district": district, "segment": segment},
-    )
-    pad = 0.0012 * (14 - min(z, 14) + 1)
-    viewport = clip_to_bounds(filtered, west, south, east, north, pad=pad)
-    if viewport.empty:
-        return encode(
-            [{"name": "districts", "features": []}],
-            per_layer_options={"districts": {"quantize_bounds": quant, "on_invalid_geometry": on_invalid_geometry_ignore}},
+    scored = get_scored_geo_dataframe(base, weights, active_keys, profile=profile)
+    with profile.stage("filtering", rows_before=len(scored)) as stage:
+        filtered = apply_filters(
+            scored,
+            {"post_area": post_area, "sprawl": sprawl, "district": district, "segment": segment},
         )
+        stage.set_rows_after(len(filtered))
+    pad = 0.0012 * (14 - min(z, 14) + 1)
+    viewport = clip_to_bounds(filtered, west, south, east, north, pad=pad, profile=profile)
+    if viewport.empty:
+        profile.set_summary(result_rows=0)
+        with profile.stage("mvt_encode", rows_before=0, rows_after_default=0) as stage:
+            empty_body = encode(
+                [{"name": "districts", "features": []}],
+                per_layer_options={"districts": {"quantize_bounds": quant, "on_invalid_geometry": on_invalid_geometry_ignore}},
+            )
+            stage.update_meta(empty=True)
+        return empty_body
 
     col = _geom_column_for_tile(z)
-    if col and col in viewport.columns:
-        plot_gdf = gpd.GeoDataFrame(
-            viewport.drop(columns=[GEOM_MAP_LOW, GEOM_MAP_MID], errors="ignore").copy(),
-            geometry=viewport[col],
-            crs=viewport.crs,
-        )
-    else:
-        plot_gdf = build_api_map_frame(
-            viewport,
-            max(6, min(z, 12)),
-            allow_centroid_fallback=False,
-        )
+    with profile.stage("geometry_prep", rows_before=len(viewport)) as stage:
+        if col and col in viewport.columns:
+            plot_gdf = gpd.GeoDataFrame(
+                viewport.drop(columns=[GEOM_MAP_LOW, GEOM_MAP_MID], errors="ignore").copy(),
+                geometry=viewport[col],
+                crs=viewport.crs,
+            )
+            stage.update_meta(geometry_source=col)
+        else:
+            plot_gdf = build_api_map_frame(
+                viewport,
+                max(6, min(z, 12)),
+                allow_centroid_fallback=False,
+                profile=profile,
+            )
+            stage.update_meta(geometry_source="build_api_map_frame")
+        stage.set_rows_after(len(plot_gdf))
 
-    plot_3857 = plot_gdf.to_crs(3857)
+    with profile.stage("crs_transform", rows_before=len(plot_gdf), rows_after_default=len(plot_gdf)) as stage:
+        plot_3857 = plot_gdf.to_crs(3857)
+        stage.update_meta(target_epsg=3857)
     feats: list[dict[str, object]] = []
-    for _, row in plot_3857.iterrows():
-        geom = row.geometry
-        if geom is None or geom.is_empty:
-            continue
-        try:
-            feats.append({"geometry": geom, "properties": _mvt_properties(row)})
-        except Exception:
-            continue
-
-    return encode(
-        [{"name": "districts", "features": feats}],
-        per_layer_options={
-            "districts": {
-                "quantize_bounds": quant,
-                "on_invalid_geometry": on_invalid_geometry_ignore,
-                "check_winding_order": False,
-            }
-        },
-    )
+    with profile.stage("feature_prep", rows_before=len(plot_3857)) as stage:
+        for _, row in plot_3857.iterrows():
+            geom = row.geometry
+            if geom is None or geom.is_empty:
+                continue
+            try:
+                feats.append({"geometry": geom, "properties": _mvt_properties(row)})
+            except Exception:
+                continue
+        stage.set_rows_after(len(feats))
+    profile.set_summary(result_rows=len(feats))
+    with profile.stage("mvt_encode", rows_before=len(feats), rows_after_default=len(feats)) as stage:
+        body = encode(
+            [{"name": "districts", "features": feats}],
+            per_layer_options={
+                "districts": {
+                    "quantize_bounds": quant,
+                    "on_invalid_geometry": on_invalid_geometry_ignore,
+                    "check_winding_order": False,
+                }
+            },
+        )
+        stage.update_meta(quantize_bounds=quant)
+    return body
 
 
 def _tile_response(body: bytes) -> Response:

@@ -6,28 +6,35 @@ from typing import Any
 import geopandas as gpd
 import orjson
 import pandas as pd
+from shapely.geometry.base import BaseGeometry
 
 
 def geojson_bytes_from_frame(gdf: gpd.GeoDataFrame) -> bytes:
-    properties_columns = [column for column in gdf.columns if column != "geometry"]
+    columns = list(gdf.columns)
+    geometry_idx = columns.index("geometry")
+    property_indices = [(idx, column) for idx, column in enumerate(columns) if column != "geometry"]
     features: list[dict[str, Any]] = []
-    for row in gdf.itertuples(index=False):
-        row_dict = row._asdict()
-        geometry = row_dict.pop("geometry", None)
+    for row in gdf.itertuples(index=False, name=None):
+        geometry = row[geometry_idx]
         if geometry is None or geometry.is_empty:
             continue
-        properties = {key: _json_safe(value) for key, value in row_dict.items()}
         features.append(
             {
                 "type": "Feature",
-                "geometry": geometry.__geo_interface__,
-                "properties": {key: properties[key] for key in properties_columns if key in properties},
+                "geometry": _geometry_to_geojson(geometry),
+                "properties": {column: _json_safe(row[idx]) for idx, column in property_indices},
             }
         )
     return orjson.dumps(
         {"type": "FeatureCollection", "features": features},
         option=orjson.OPT_SERIALIZE_NUMPY,
     )
+
+
+def _geometry_to_geojson(geometry: BaseGeometry) -> dict[str, Any]:
+    if geometry.geom_type == "Point":
+        return {"type": "Point", "coordinates": [geometry.x, geometry.y]}
+    return geometry.__geo_interface__
 
 
 def _json_safe(value: Any) -> Any:

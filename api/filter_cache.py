@@ -7,6 +7,7 @@ from typing import Any
 import geopandas as gpd
 
 from controllers.filters import build_filter_mask
+from .profiling import RequestProfile
 
 _LOCK = threading.Lock()
 _CACHE: OrderedDict[tuple[Any, ...], gpd.GeoDataFrame] = OrderedDict()
@@ -18,6 +19,7 @@ def get_filtered_geo_dataframe(
     filters: dict[str, object],
     weights: dict[str, float],
     active_keys: list[str],
+    profile: RequestProfile | None = None,
 ) -> gpd.GeoDataFrame:
     key = (
         tuple(sorted(filters.items())),
@@ -28,10 +30,20 @@ def get_filtered_geo_dataframe(
         hit = _CACHE.get(key)
         if hit is not None:
             _CACHE.move_to_end(key)
+            if profile is not None:
+                profile.cache("filtered_frame_cache", "hit", rows=len(hit))
+                profile.add_stage("filtering", rows_before=len(scored), rows_after=len(hit), meta={"cache": "hit"})
             return hit
 
-    mask = build_filter_mask(scored, filters)
-    filtered = scored if bool(mask.all()) else scored.loc[mask]
+    if profile is not None:
+        profile.cache("filtered_frame_cache", "miss")
+        with profile.stage("filtering", rows_before=len(scored)) as stage:
+            mask = build_filter_mask(scored, filters)
+            filtered = scored if bool(mask.all()) else scored.loc[mask]
+            stage.set_rows_after(len(filtered))
+    else:
+        mask = build_filter_mask(scored, filters)
+        filtered = scored if bool(mask.all()) else scored.loc[mask]
 
     with _LOCK:
         _CACHE[key] = filtered

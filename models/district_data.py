@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from pyogrio.errors import DataSourceError
 
+from api.profiling import RequestProfile
 from config import DATASET_PATH, DISTRICT_DATA_PATH
 from .synthetic_portfolio import build_synthetic_metrics
 
@@ -156,6 +157,7 @@ def build_api_map_frame(
     zoom: int,
     *,
     allow_centroid_fallback: bool = True,
+    profile: RequestProfile | None = None,
 ) -> gpd.GeoDataFrame:
     export_columns = [
         "PostDist",
@@ -184,14 +186,51 @@ def build_api_map_frame(
         row_count > 3800 or (zoom <= 5 and row_count > 2600)
     )
     if use_point_overview:
-        frame["geometry"] = gdf.geometry.representative_point()
+        if profile is not None:
+            with profile.stage("representative_point", rows_before=len(gdf), rows_after_default=len(frame)) as stage:
+                frame["geometry"] = gpd.points_from_xy(
+                    gdf.loc[frame.index, "center_lon"],
+                    gdf.loc[frame.index, "center_lat"],
+                    crs="EPSG:4326",
+                )
+                stage.update_meta(reason="point_overview", source="precomputed_center")
+        else:
+            frame["geometry"] = gpd.points_from_xy(
+                gdf.loc[frame.index, "center_lon"],
+                gdf.loc[frame.index, "center_lat"],
+                crs="EPSG:4326",
+            )
+        geometry_source = "precomputed_center_point"
     else:
+        if profile is not None:
+            profile.add_stage(
+                "representative_point",
+                rows_before=len(gdf),
+                rows_after=len(frame),
+                meta={"skipped": True, "reason": "polygon_mode"},
+            )
         frame["geometry"] = api_geometry_series(gdf, zoom).loc[frame.index]
-    frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
+        geometry_source = "precomputed_lod" if zoom <= 9 else "base_geometry"
 
-    numeric_columns = [column for column in frame.columns if column != "geometry"]
-    for column in numeric_columns:
-        if str(frame[column].dtype).startswith(("float", "int")):
-            frame[column] = frame[column].round(2)
+    if profile is not None:
+        profile.add_stage(
+            "simplify",
+            rows_before=len(gdf),
+            rows_after=len(frame),
+            meta={"skipped": True, "reason": "no_runtime_simplify"},
+        )
+        with profile.stage("geometry_prep", rows_before=len(gdf), rows_after_default=len(frame)) as stage:
+            frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
+            numeric_columns = [column for column in frame.columns if column != "geometry"]
+            for column in numeric_columns:
+                if str(frame[column].dtype).startswith(("float", "int")):
+                    frame[column] = frame[column].round(2)
+            stage.update_meta(geometry_source=geometry_source, allow_centroid_fallback=allow_centroid_fallback, zoom=zoom)
+    else:
+        frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
+        numeric_columns = [column for column in frame.columns if column != "geometry"]
+        for column in numeric_columns:
+            if str(frame[column].dtype).startswith(("float", "int")):
+                frame[column] = frame[column].round(2)
 
     return gpd.GeoDataFrame(frame, geometry="geometry", crs="EPSG:4326")

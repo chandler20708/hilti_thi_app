@@ -12,6 +12,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from .filter_cache import get_filtered_geo_dataframe
 from .geojson import geojson_bytes_from_frame
+from .profiling import RequestProfile
 from .query_cache import BytesTTLCache
 from config import API_CORS_ORIGINS
 from models.district_data import build_api_map_frame, load_prototype_geo_dataframe
@@ -81,10 +82,28 @@ async def districts(
     w_gii: Annotated[float | None, Query()] = None,
     w_pis: Annotated[float | None, Query()] = None,
 ) -> Response:
+    profile = RequestProfile(
+        "/districts",
+        params={
+            "zoom": zoom,
+            "has_bbox": None not in {west, south, east, north},
+            "post_area": post_area,
+            "sprawl": sprawl,
+            "district": district,
+            "segment": segment,
+            "active": active,
+        },
+    )
     cache_key = _districts_cache_key(request)
-    cached = _DISTRICTS_CACHE.get(cache_key)
+    with profile.stage("districts_cache_lookup") as stage:
+        cached = _DISTRICTS_CACHE.get(cache_key)
+        stage.update_meta(cache_key=cache_key)
     if cached is not None:
+        profile.cache("districts_cache", "hit", bytes=len(cached))
+        profile.set_summary(cache_hit=True)
+        profile.finish(response_bytes=len(cached))
         return _districts_response(cached)
+    profile.cache("districts_cache", "miss")
 
     gdf: gpd.GeoDataFrame = app.state.base_gdf
     body = await run_in_threadpool(
@@ -105,8 +124,11 @@ async def districts(
         w_cps,
         w_gii,
         w_pis,
+        profile,
     )
     _DISTRICTS_CACHE.set(cache_key, body)
+    profile.set_summary(cache_hit=False, result_rows=None)
+    profile.finish(response_bytes=len(body))
     return _districts_response(body)
 
 
@@ -127,19 +149,28 @@ def _build_districts_body(
     w_cps: float | None,
     w_gii: float | None,
     w_pis: float | None,
+    profile: RequestProfile | None = None,
 ) -> bytes:
-    weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
-    active_keys = _parse_active_keys(active)
-    scored = get_scored_geo_dataframe(gdf, weights, active_keys)
+    profile = profile or RequestProfile("/districts-build", enabled=False)
+    with profile.stage("query_parse", rows_before=len(gdf), rows_after_default=len(gdf)) as stage:
+        weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
+        active_keys = _parse_active_keys(active)
+        stage.update_meta(active_key_count=len(active_keys), weights=weights)
+    scored = get_scored_geo_dataframe(gdf, weights, active_keys, profile=profile)
     filters = {
         "post_area": post_area,
         "sprawl": sprawl,
         "district": district,
         "segment": segment,
     }
-    filtered = get_filtered_geo_dataframe(scored, filters, weights, active_keys)
-    viewport = _apply_bbox(filtered, west, south, east, north, zoom)
-    return geojson_bytes_from_frame(build_api_map_frame(viewport, zoom))
+    filtered = get_filtered_geo_dataframe(scored, filters, weights, active_keys, profile=profile)
+    viewport = _apply_bbox(filtered, west, south, east, north, zoom, profile=profile)
+    map_frame = build_api_map_frame(viewport, zoom, profile=profile)
+    profile.set_summary(result_rows=len(map_frame))
+    with profile.stage("serialization", rows_before=len(map_frame), rows_after_default=len(map_frame)) as stage:
+        body = geojson_bytes_from_frame(map_frame)
+        stage.update_meta(format="geojson")
+    return body
 
 
 def _districts_response(body: bytes) -> Response:
@@ -187,11 +218,12 @@ def _apply_bbox(
     east: float | None,
     north: float | None,
     zoom: int,
+    profile: RequestProfile | None = None,
 ) -> gpd.GeoDataFrame:
     if None in {west, south, east, north}:
         return gdf
     pad = _padding_for_zoom(zoom)
-    return clip_to_bounds(gdf, west, south, east, north, pad=pad, precise=zoom >= 7)
+    return clip_to_bounds(gdf, west, south, east, north, pad=pad, precise=zoom >= 7, profile=profile)
 
 
 def _padding_for_zoom(zoom: int) -> float:
