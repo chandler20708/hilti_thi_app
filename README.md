@@ -148,6 +148,17 @@ For hosted deployments, set:
 
 For a demo or personal project, `API_CORS_ORIGINS="*"` is fine. For a stricter setup, set it to your Streamlit app URL.
 
+### Free-tier cold starts (GitHub keep-warm)
+
+The workflow `.github/workflows/keep-warm.yml` runs on a cron schedule and **GET**s your endpoints after a **random 0–45 minute** delay so wake times vary. Add **repository Action secrets**:
+
+- **`KEEP_WARM_API_URL`** — e.g. `https://your-service.onrender.com/health` (required for API wake)
+- **`KEEP_WARM_STREAMLIT_URL`** — your Streamlit app URL (optional)
+
+Scheduled workflows only run on the **default** branch and GitHub may **disable** them after long repository inactivity; re-enable under **Actions** if needed.
+
+The FastAPI service also **caches identical `/districts` query strings** for about 90 seconds (bounded memory) and enables **gzip** for JSON responses to reduce transfer time.
+
 ## Next steps after the meeting
 
 1. Replace the provisional factor names and weights with the agreed THI framework.

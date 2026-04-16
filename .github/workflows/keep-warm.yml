@@ -1,0 +1,69 @@
+# Keeps Render (and optional Streamlit) from sleeping by issuing HTTP GETs on a
+# schedule. Each run waits a random 0–45 minutes before pinging so wall-clock
+# times vary day to day.
+#
+# Secrets (GitHub → Settings → Secrets and variables → Actions):
+#   KEEP_WARM_API_URL          required for API wake, e.g. https://xxx.onrender.com/health
+#   KEEP_WARM_STREAMLIT_URL    optional, e.g. https://your-app.streamlit.app
+#
+# Scheduled workflows only run from the repository default branch.
+
+name: Keep API and app warm
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 7 * * *"
+    - cron: "19 19 * * *"
+    - cron: "27 */6 * * *"
+
+concurrency:
+  group: keep-warm
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Random delay (jitter)
+        run: |
+          set -euo pipefail
+          max_sleep=2700
+          s=$((RANDOM % max_sleep))
+          echo "Sleeping ${s}s (0–$((max_sleep / 60)) min) before pings."
+          sleep "$s"
+
+      - name: Ping map API
+        env:
+          URL: ${{ secrets.KEEP_WARM_API_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${URL:-}" ]; then
+            echo "KEEP_WARM_API_URL is not set; skipping API ping."
+            exit 0
+          fi
+          echo "GET $URL"
+          curl -fsSL --connect-timeout 30 --max-time 180 \
+            --retry 5 --retry-delay 20 --retry-all-errors \
+            -o /dev/null "$URL"
+          echo "API ping OK."
+
+      - name: Ping Streamlit (optional)
+        env:
+          URL: ${{ secrets.KEEP_WARM_STREAMLIT_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${URL:-}" ]; then
+            echo "KEEP_WARM_STREAMLIT_URL not set; skipping."
+            exit 0
+          fi
+          echo "GET $URL"
+          curl -fsSL --connect-timeout 30 --max-time 240 \
+            --retry 4 --retry-delay 20 --retry-all-errors \
+            -A "Mozilla/5.0 (compatible; HiltiKeepWarm/1.0)" \
+            -o /dev/null "$URL"
+          echo "Streamlit ping OK."

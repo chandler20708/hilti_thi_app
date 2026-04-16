@@ -1,19 +1,23 @@
 from __future__ import annotations
 
-import json
 from typing import Annotated
+from urllib.parse import urlencode
 
 import geopandas as gpd
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
+from starlette.middleware.gzip import GZipMiddleware
 
+from .query_cache import BytesTTLCache
 from config import API_CORS_ORIGINS
 from controllers.filters import apply_filters
 from models.district_data import build_api_map_frame, load_prototype_geo_dataframe
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog, score_thi
 
 app = FastAPI(title="Hilti Territory Map API")
+
+_DISTRICTS_CACHE = BytesTTLCache(max_entries=40, ttl_seconds=90.0, max_entry_bytes=4_500_000)
 
 
 def _allowed_origins() -> list[str]:
@@ -29,6 +33,7 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=800)
 
 
 @app.on_event("startup")
@@ -41,8 +46,14 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _districts_cache_key(request: Request) -> str:
+    pairs = sorted(request.query_params.multi_items())
+    return urlencode(pairs)
+
+
 @app.get("/districts")
 def districts(
+    request: Request,
     west: Annotated[float | None, Query()] = None,
     south: Annotated[float | None, Query()] = None,
     east: Annotated[float | None, Query()] = None,
@@ -58,7 +69,12 @@ def districts(
     w_cps: Annotated[float | None, Query()] = None,
     w_gii: Annotated[float | None, Query()] = None,
     w_pis: Annotated[float | None, Query()] = None,
-) -> JSONResponse:
+) -> Response:
+    cache_key = _districts_cache_key(request)
+    cached = _DISTRICTS_CACHE.get(cache_key)
+    if cached is not None:
+        return Response(content=cached, media_type="application/json")
+
     gdf: gpd.GeoDataFrame = app.state.base_gdf
     weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
     active_keys = _parse_active_keys(active)
@@ -73,8 +89,9 @@ def districts(
         },
     )
     viewport = _apply_bbox(filtered, west, south, east, north, zoom)
-    payload = json.loads(build_api_map_frame(viewport, zoom).to_json())
-    return JSONResponse(payload)
+    body = build_api_map_frame(viewport, zoom).to_json().encode("utf-8")
+    _DISTRICTS_CACHE.set(cache_key, body)
+    return Response(content=body, media_type="application/json")
 
 
 def _parse_active_keys(active: str) -> list[str]:
