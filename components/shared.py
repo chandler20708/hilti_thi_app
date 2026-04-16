@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
+from typing import Any
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -42,6 +44,18 @@ def _normalize_api_base_url(raw: object | None) -> str:
     return s.rstrip("/")
 
 
+def _api_url_from_mapping(obj: Any) -> str:
+    if not isinstance(obj, Mapping):
+        return ""
+    for key in ("API_BASE_URL", "api_base_url", "HILTI_API_BASE_URL", "hilti_api_base_url"):
+        if key not in obj:
+            continue
+        url = _normalize_api_base_url(obj[key])
+        if url:
+            return url
+    return ""
+
+
 def resolve_api_base_url() -> str:
     """Resolve the map API base URL at call time (no trailing slash).
 
@@ -65,6 +79,15 @@ def resolve_api_base_url() -> str:
             if key not in st.secrets:
                 continue
             url = _normalize_api_base_url(st.secrets[key])
+            if url:
+                return url
+        # TOML: keys that appear after a ``[theme]`` header are nested under ``theme``,
+        # so Cloud secrets like ``[theme]`` / ``base = "light"`` / ``API_BASE_URL = "..."``
+        # store the URL at ``st.secrets["theme"]["API_BASE_URL"]``, not top-level.
+        for section in ("theme", "api", "map", "hilti", "streamlit"):
+            if section not in st.secrets:
+                continue
+            url = _api_url_from_mapping(st.secrets[section])
             if url:
                 return url
     except Exception:
