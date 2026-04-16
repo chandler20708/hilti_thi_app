@@ -33,22 +33,25 @@ def render_leaflet_metric_map(
     }
 
     if api_base_url:
-        from .vector_tile_map import render_vector_tile_map
+        from .shared import resolve_use_vector_tiles
 
-        render_vector_tile_map(
-            api_base_url=api_base_url,
-            metric_key=metric_key,
-            metric_label=metric_label,
-            focus_record=focus_record,
-            should_refocus=should_refocus,
-            filters=filters,
-            store_locations=store_locations,
-            focus_district=focus_district,
-            weights=weights,
-            active_keys=active_keys,
-            height=height,
-        )
-        return
+        if resolve_use_vector_tiles():
+            from .vector_tile_map import render_vector_tile_map
+
+            render_vector_tile_map(
+                api_base_url=api_base_url,
+                metric_key=metric_key,
+                metric_label=metric_label,
+                focus_record=focus_record,
+                should_refocus=should_refocus,
+                filters=filters,
+                store_locations=store_locations,
+                focus_district=focus_district,
+                weights=weights,
+                active_keys=active_keys,
+                height=height,
+            )
+            return
 
     html = f"""
     <!DOCTYPE html>

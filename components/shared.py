@@ -56,6 +56,57 @@ def _api_url_from_mapping(obj: Any) -> str:
     return ""
 
 
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+_FALSY = frozenset({"0", "false", "no", "off", ""})
+
+
+def _parse_boolish(raw: object | None) -> bool | None:
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return raw
+    s = str(raw).strip().lower()
+    if s in _TRUTHY:
+        return True
+    if s in _FALSY:
+        return False
+    return None
+
+
+def resolve_use_vector_tiles() -> bool:
+    """Use MapLibre + MVT when True; default False (Leaflet + `/districts` is lighter for small APIs)."""
+    for key in ("HILTI_USE_VECTOR_TILES", "USE_VECTOR_TILES"):
+        hit = _parse_boolish(os.getenv(key))
+        if hit is not None:
+            return hit
+    try:
+        list(st.secrets.keys())
+    except Exception:
+        pass
+    try:
+        for key in ("HILTI_USE_VECTOR_TILES", "use_vector_tiles"):
+            if key not in st.secrets:
+                continue
+            hit = _parse_boolish(st.secrets[key])
+            if hit is not None:
+                return hit
+        for section in ("theme", "api", "map", "hilti", "streamlit"):
+            if section not in st.secrets:
+                continue
+            sec = st.secrets[section]
+            if not isinstance(sec, Mapping):
+                continue
+            for key in ("HILTI_USE_VECTOR_TILES", "use_vector_tiles"):
+                if key not in sec:
+                    continue
+                hit = _parse_boolish(sec[key])
+                if hit is not None:
+                    return hit
+    except Exception:
+        pass
+    return False
+
+
 def resolve_api_base_url() -> str:
     """Resolve the map API base URL at call time (no trailing slash).
 
@@ -98,7 +149,16 @@ def resolve_api_base_url() -> str:
 
 def map_data_source_caption(api_base_url: str) -> None:
     if api_base_url:
-        st.caption("Territory polygons: live API (viewport requests to your hosted `/districts` endpoint).")
+        if resolve_use_vector_tiles():
+            st.caption(
+                "Territory polygons: MapLibre vector tiles from your API `/tiles/{z}/{x}/{y}.mvt` "
+                "(set `HILTI_USE_VECTOR_TILES=0` to use faster Leaflet + `/districts` viewport requests)."
+            )
+        else:
+            st.caption(
+                "Territory polygons: live API (viewport requests to your hosted `/districts` endpoint). "
+                "Optional: set `HILTI_USE_VECTOR_TILES=1` to try MapLibre vector tiles instead."
+            )
     else:
         st.caption(
             "Territory polygons: bundled inline data. Set `API_BASE_URL` in Streamlit secrets, "
