@@ -43,3 +43,5 @@ DISTRICT_DATA_PATH = _resolve_data_path(
     ("HILTI_DISTRICT_PATH", "HILTI_DISTRICT_GPKG_PATH"),
 )
 CASE_STUDY_PATH = _resolve_data_path(("Hilti Case Study 2026.pdf",), ("HILTI_CASE_STUDY_PATH",))
+API_BASE_URL = os.getenv("API_BASE_URL", "").rstrip("/")
+API_CORS_ORIGINS = os.getenv("API_CORS_ORIGINS", "*")

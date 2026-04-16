@@ -5,14 +5,15 @@ import json
 import streamlit as st
 
 from controllers.filters import apply_filters, get_focus_record
-from models.district_data import load_prototype_geo_dataframe
+from models.district_data import build_map_frame, load_prototype_geo_dataframe
 from models.scoring import score_thi, summarize_metric
 from components.map_component import render_leaflet_metric_map
-from components.shared import render_metric_cards, render_ranking_bar, render_thi_controls
+from components.shared import render_metric_cards, render_ranking_bar, render_thi_controls, resolve_api_base_url
 
 
 def render_page(filters: dict[str, object]) -> None:
     base = load_prototype_geo_dataframe()
+    api_base_url = resolve_api_base_url()
 
     left, right = st.columns([0.92, 2.08], gap="large")
     with left:
@@ -21,7 +22,10 @@ def render_page(filters: dict[str, object]) -> None:
     scored = score_thi(base, thi_controls["weights"], thi_controls["active_keys"])
     filtered = apply_filters(scored, filters)
     scope_frame = filtered if not filtered.empty else scored
-    geojson_data = json.dumps(json.loads(scope_frame.to_json()))
+    geojson_data = None
+    if not api_base_url:
+        map_frame = build_map_frame(scope_frame, filters.get("sprawl", "All"))
+        geojson_data = json.dumps(json.loads(map_frame.to_json()))
     focus = get_focus_record(base, filters)
     summary = summarize_metric(scope_frame, "thi_score")
 
@@ -51,7 +55,11 @@ def render_page(filters: dict[str, object]) -> None:
                 metric_label="Territorial Health Index",
                 focus_record=focus,
                 should_refocus=False,
+                api_base_url=api_base_url or None,
+                filters=filters,
                 focus_district=filters.get("district"),
+                weights=thi_controls["weights"],
+                active_keys=thi_controls["active_keys"],
                 height=720,
             )
             st.markdown("</div>", unsafe_allow_html=True)

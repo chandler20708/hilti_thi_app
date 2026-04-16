@@ -120,13 +120,33 @@ pip install -r requirements.txt
 
 In the normal case, no secrets are required as long as the app-local `data/` folder is committed with the app.
 
+If you want the fast viewport-loading map in deployment, host the FastAPI service separately and set `API_BASE_URL` in Streamlit Cloud. You can still run the Streamlit app without it, but the map will fall back to the inline mode.
+
 If you need to override the paths in Streamlit Cloud, use TOML secrets like this:
 
 ```toml
 HILTI_DATASET_PATH = "/mount/src/data/dataset2.xlsx"
 HILTI_DISTRICT_PATH = "/mount/src/data/UK_postcode_districts.parquet"
 HILTI_CASE_STUDY_PATH = "/mount/src/data/Hilti Case Study 2026.pdf"
+API_BASE_URL = "https://your-map-api.example.com"
 ```
+
+## Optional FastAPI map service
+
+The repository includes a FastAPI backend at `api/main.py` for viewport-based district loading.
+
+Run it locally from the app root with:
+
+```bash
+uvicorn api.main:app --reload
+```
+
+For hosted deployments, set:
+
+- `API_BASE_URL` in Streamlit Cloud secrets
+- `API_CORS_ORIGINS` in the FastAPI host environment
+
+For a demo or personal project, `API_CORS_ORIGINS="*"` is fine. For a stricter setup, set it to your Streamlit app URL.
 
 ## Next steps after the meeting
 

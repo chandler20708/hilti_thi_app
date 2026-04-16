@@ -7,22 +7,29 @@ import streamlit.components.v1 as components
 
 
 def render_leaflet_metric_map(
-    geojson_data: str,
+    geojson_data: str | None,
     metric_key: str,
     metric_label: str,
     focus_record: dict[str, object] | None,
     should_refocus: bool,
+    api_base_url: str | None = None,
+    filters: dict[str, object] | None = None,
     store_locations: list[dict[str, object]] | None = None,
     focus_district: str | None = None,
+    weights: dict[str, float] | None = None,
+    active_keys: list[str] | None = None,
     height: int = 720,
 ) -> None:
     map_id = f"map_{uuid4().hex}"
     state = {
+        **(filters or {}),
         "metric_key": metric_key,
         "metric_label": metric_label,
         "should_refocus": should_refocus,
         "focus_district": focus_district,
         "store_locations": store_locations or [],
+        "weights": weights or {},
+        "active_keys": active_keys or [],
     }
 
     html = f"""
@@ -143,10 +150,12 @@ def render_leaflet_metric_map(
       <script>
         const state = {json.dumps(state)};
         const focus = {json.dumps(focus_record)};
-        const geojson = {geojson_data};
+        const geojson = {geojson_data if geojson_data is not None else "null"};
+        const apiBaseUrl = {json.dumps(api_base_url)};
         const storeLocations = state.store_locations || [];
         const loadingEl = document.getElementById("loading");
         const recenterBtn = document.getElementById("recenterBtn");
+        const responseCache = new Map();
         const storageKey = "hilti_market_map_state_" + state.metric_key;
         const defaultBounds = [[49.8, -8.2], [60.9, 2.2]];
 
@@ -254,6 +263,31 @@ def render_leaflet_metric_map(
           `, {{sticky: true}});
         }}
 
+        function buildQuery() {{
+          const bounds = map.getBounds();
+          const params = new URLSearchParams();
+          params.set("west", bounds.getWest().toFixed(6));
+          params.set("south", bounds.getSouth().toFixed(6));
+          params.set("east", bounds.getEast().toFixed(6));
+          params.set("north", bounds.getNorth().toFixed(6));
+          params.set("zoom", String(map.getZoom()));
+
+          if (state.post_area && state.post_area !== "All") params.set("post_area", state.post_area);
+          if (state.sprawl && state.sprawl !== "All") params.set("sprawl", state.sprawl);
+          if (state.district && state.district !== "All") params.set("district", state.district);
+          if (state.segment && state.segment !== "All") params.set("segment", state.segment);
+
+          if (state.active_keys && state.active_keys.length) {{
+            params.set("active", state.active_keys.join(","));
+          }}
+          if (state.weights) {{
+            Object.entries(state.weights).forEach(([key, value]) => {{
+              params.set(`w_${{key}}`, String(value));
+            }});
+          }}
+          return `${{apiBaseUrl}}/districts?${{params.toString()}}`;
+        }}
+
         function paint(geojson, fromRefresh) {{
             districtLayer.clearLayers();
             markerLayer.clearLayers();
@@ -300,6 +334,30 @@ def render_leaflet_metric_map(
             loadingEl.textContent = (fromRefresh ? "Refreshed " : "Loaded ") + count + " district polygons";
         }}
 
+        async function refreshFromApi() {{
+          try {{
+            const query = buildQuery();
+            const cached = responseCache.get(query);
+            if (cached) {{
+              paint(cached, true);
+              return;
+            }}
+
+            loadingEl.textContent = "Loading map data…";
+            const response = await fetch(query);
+            const payload = await response.json();
+            responseCache.set(query, payload);
+            if (responseCache.size > 24) {{
+              const firstKey = responseCache.keys().next().value;
+              responseCache.delete(firstKey);
+            }}
+            paint(payload, false);
+          }} catch (error) {{
+            loadingEl.textContent = "Map request failed";
+            console.error(error);
+          }}
+        }}
+
         function getStorage() {{
           try {{
             if (window.parent && window.parent.localStorage) {{
@@ -332,7 +390,11 @@ def render_leaflet_metric_map(
           const targetBounds = focus && focus.bounds ? focus.bounds : defaultBounds;
           map.fitBounds(targetBounds, {{ padding: [16, 16], animate: false }});
           saveViewState();
-          paint(geojson, true);
+          if (apiBaseUrl) {{
+            refreshFromApi();
+          }} else {{
+            paint(geojson, true);
+          }}
         }}
 
         map.on("moveend", () => {{
@@ -341,7 +403,17 @@ def render_leaflet_metric_map(
 
         map.on("zoomend", () => {{
           saveViewState();
-          paint(geojson, true);
+          if (apiBaseUrl) {{
+            refreshFromApi();
+          }} else {{
+            paint(geojson, true);
+          }}
+        }});
+
+        map.on("moveend", () => {{
+          if (apiBaseUrl) {{
+            refreshFromApi();
+          }}
         }});
 
         recenterBtn.addEventListener("click", recenterToTarget);
@@ -372,7 +444,11 @@ def render_leaflet_metric_map(
           saveViewState();
         }}
 
-        paint(geojson, false);
+        if (apiBaseUrl) {{
+          refreshFromApi();
+        }} else {{
+          paint(geojson, false);
+        }}
       </script>
     </body>
     </html>

@@ -13,6 +13,7 @@ from components.shared import (
     METRIC_CONFIG,
     render_app_frame,
     build_analysis_filters,
+    resolve_api_base_url,
     render_sidebar_controls,
     render_metric_cards,
     render_top_territories_snapshot,
@@ -37,6 +38,7 @@ def render_page() -> None:
 
     controls = render_sidebar_controls(city_options, options["segments"], territories_by_city, default_city)
     st.session_state["executive_city"] = controls["city"]
+    api_base_url = resolve_api_base_url()
 
     thi_controls = render_thi_controls(expanded=False)
     scored = score_thi(base, thi_controls["weights"], thi_controls["active_keys"])
@@ -46,8 +48,10 @@ def render_page() -> None:
     scope_frame = apply_filters(scored, analysis_filters)
     if scope_frame.empty:
         scope_frame = scored
-    map_frame = build_map_frame(scope_frame, controls["city"])
-    geojson_data = json.dumps(json.loads(map_frame.to_json()))
+    geojson_data = None
+    if not api_base_url:
+        map_frame = build_map_frame(scope_frame, controls["city"])
+        geojson_data = json.dumps(json.loads(map_frame.to_json()))
 
     visible_stores = store_locations
     if controls["city"] != "All":
@@ -98,8 +102,12 @@ def render_page() -> None:
                 metric_label=metric_meta["label"],
                 focus_record=focus,
                 should_refocus=should_refocus,
+                api_base_url=api_base_url or None,
+                filters=analysis_filters,
                 store_locations=visible_stores.to_dict("records"),
                 focus_district=selected_territory,
+                weights=thi_controls["weights"],
+                active_keys=thi_controls["active_keys"],
                 height=720,
             )
 

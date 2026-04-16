@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from config import API_BASE_URL
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
 TRAFFIC_SCALE = ["#ea4335", "#fbbc04", "#34a853"]
@@ -29,6 +30,16 @@ def build_analysis_filters(city: str, segment: str, district: str = "All") -> di
         "sprawl": city,
         "segment": segment,
     }
+
+
+def resolve_api_base_url() -> str:
+    try:
+        secret_url = str(st.secrets.get("API_BASE_URL", "")).strip()
+        if secret_url:
+            return secret_url.rstrip("/")
+    except Exception:
+        pass
+    return API_BASE_URL
 
 
 def render_app_frame(

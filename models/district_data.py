@@ -25,6 +25,8 @@ MAP_PAYLOAD_COLUMNS = [
 
 MAP_PAYLOAD_RENAMES = {
     "PostDist": "post_dist",
+    "PostArea": "post_area",
+    "Sprawl": "sprawl",
 }
 
 
@@ -127,4 +129,52 @@ def build_map_frame(gdf: gpd.GeoDataFrame, city_scope: str) -> gpd.GeoDataFrame:
         frame["geometry"] = frame.geometry.simplify(tolerance=tolerance, preserve_topology=True)
 
     frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
+    return gpd.GeoDataFrame(frame, geometry="geometry", crs="EPSG:4326")
+
+
+def map_simplification_tolerance(zoom: int) -> float:
+    if zoom <= 5:
+        return 0.05
+    if zoom == 6:
+        return 0.02
+    if zoom == 7:
+        return 0.008
+    if zoom == 8:
+        return 0.003
+    if zoom == 9:
+        return 0.0015
+    return 0.0005
+
+
+def build_api_map_frame(gdf: gpd.GeoDataFrame, zoom: int) -> gpd.GeoDataFrame:
+    export_columns = [
+        "PostDist",
+        "PostArea",
+        "Sprawl",
+        "primary_segment",
+        "data_source",
+        "center_lat",
+        "center_lon",
+        "market_opportunity_score",
+        "acquisition_opportunity",
+        "retention_risk",
+        "retention_health",
+        "competition_pressure",
+        "existing_accounts",
+        "lead_volume",
+        "thi_score",
+    ]
+    available_columns = [column for column in export_columns if column in gdf.columns]
+    frame = gdf.loc[:, available_columns + ["geometry"]].copy()
+    frame["geometry"] = frame.geometry.simplify(
+        tolerance=map_simplification_tolerance(zoom),
+        preserve_topology=True,
+    )
+    frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
+
+    numeric_columns = [column for column in frame.columns if column != "geometry"]
+    for column in numeric_columns:
+        if str(frame[column].dtype).startswith(("float", "int")):
+            frame[column] = frame[column].round(2)
+
     return gpd.GeoDataFrame(frame, geometry="geometry", crs="EPSG:4326")
