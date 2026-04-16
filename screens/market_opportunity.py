@@ -68,8 +68,8 @@ def render_page() -> None:
     render_metric_cards(
         [
             ("City in focus", controls["city"], "Primary executive review area"),
-            ("Average growth opportunity", f"{avg_growth:.1f}", "Current city-wide territory average"),
-            ("Average retention health", f"{avg_retention:.1f}", "Higher values mean stronger retention health"),
+            ("Average growth opportunity", f"{avg_growth:.1f}", "Current city-wide territory average on acquisition"),
+            ("Average retention health", f"{avg_retention:.1f}", "Current city-wide territory average on retention"),
             ("Top priority territory", top_territory, f"Highest {metric_meta['short_label'].lower()} signal in scope"),
         ],
         scope_frame=scope_frame
