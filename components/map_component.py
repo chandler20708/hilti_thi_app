@@ -344,6 +344,22 @@ def render_leaflet_metric_map(
           }}
         }}
 
+        function mergeFeatureCollection(target, part, seen) {{
+          const feats = part && part.features ? part.features : [];
+          let added = 0;
+          for (let j = 0; j < feats.length; j++) {{
+            const f = feats[j];
+            const id = f.properties && f.properties.post_dist;
+            if (id) {{
+              if (seen.has(id)) continue;
+              seen.add(id);
+            }}
+            target.features.push(f);
+            added += 1;
+          }}
+          return added;
+        }}
+
         let apiRequestToken = 0;
         let apiAbort = null;
         let refreshDebounce = null;
@@ -446,15 +462,11 @@ def render_leaflet_metric_map(
               const response = await fetch(url, {{ signal }});
               if (!response.ok) throw new Error("HTTP " + response.status);
               const part = await response.json();
-              const feats = part && part.features ? part.features : [];
-              for (let j = 0; j < feats.length; j++) {{
-                const f = feats[j];
-                const id = f.properties && f.properties.post_dist;
-                if (id) {{
-                  if (seen.has(id)) continue;
-                  seen.add(id);
-                }}
-                merged.features.push(f);
+              const added = mergeFeatureCollection(merged, part, seen);
+              if (myToken !== apiRequestToken) return;
+              if (added > 0) {{
+                paint(merged, i > 0);
+                loadingEl.textContent = `Loading map data… (${{i + 1}}/${{tiles.length}}), showing ${{merged.features.length}}`;
               }}
             }}
             if (myToken !== apiRequestToken) return;
