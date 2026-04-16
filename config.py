@@ -43,5 +43,8 @@ DISTRICT_DATA_PATH = _resolve_data_path(
     ("HILTI_DISTRICT_PATH", "HILTI_DISTRICT_GPKG_PATH"),
 )
 CASE_STUDY_PATH = _resolve_data_path(("Hilti Case Study 2026.pdf",), ("HILTI_CASE_STUDY_PATH",))
+# Prefer ``components.shared.resolve_api_base_url()`` in the Streamlit app so
+# Cloud secrets (mirrored into the environment after first ``st.secrets`` load)
+# are visible. This module-level value is still useful for non-Streamlit code.
 API_BASE_URL = os.getenv("API_BASE_URL", "").rstrip("/")
 API_CORS_ORIGINS = os.getenv("API_CORS_ORIGINS", "*")

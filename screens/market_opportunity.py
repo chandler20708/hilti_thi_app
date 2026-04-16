@@ -13,6 +13,7 @@ from components.shared import (
     METRIC_CONFIG,
     render_app_frame,
     build_analysis_filters,
+    map_data_source_caption,
     resolve_api_base_url,
     render_sidebar_controls,
     render_metric_cards,
@@ -96,6 +97,7 @@ def render_page() -> None:
             st.subheader(f"{metric_meta['label']} Map")
             overview_note = " National overview uses point mode for faster loading." if controls["city"] == "All" else ""
             st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.{overview_note}")
+            map_data_source_caption(api_base_url)
             render_leaflet_metric_map(
                 geojson_data=geojson_data,
                 metric_key=metric_key,

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import os
+
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from config import API_BASE_URL
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
 TRAFFIC_SCALE = ["#ea4335", "#fbbc04", "#34a853"]
@@ -32,14 +33,54 @@ def build_analysis_filters(city: str, segment: str, district: str = "All") -> di
     }
 
 
+def _normalize_api_base_url(raw: object | None) -> str:
+    if raw is None:
+        return ""
+    s = str(raw).strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in "'\"":
+        s = s[1:-1].strip()
+    return s.rstrip("/")
+
+
 def resolve_api_base_url() -> str:
+    """Resolve the map API base URL at call time (no trailing slash).
+
+    Streamlit copies top-level string secrets into ``os.environ`` the first time
+    secrets are parsed. Reading ``API_BASE_URL`` only when ``config`` is imported
+    often misses Cloud secrets, so we touch ``st.secrets`` then read the
+    environment and secret keys again.
+    """
     try:
-        secret_url = str(st.secrets.get("API_BASE_URL", "")).strip()
-        if secret_url:
-            return secret_url.rstrip("/")
+        list(st.secrets.keys())
     except Exception:
         pass
-    return API_BASE_URL
+
+    for key in ("API_BASE_URL", "HILTI_API_BASE_URL"):
+        url = _normalize_api_base_url(os.getenv(key))
+        if url:
+            return url
+
+    try:
+        for key in ("API_BASE_URL", "api_base_url", "HILTI_API_BASE_URL", "hilti_api_base_url"):
+            if key not in st.secrets:
+                continue
+            url = _normalize_api_base_url(st.secrets[key])
+            if url:
+                return url
+    except Exception:
+        pass
+
+    return ""
+
+
+def map_data_source_caption(api_base_url: str) -> None:
+    if api_base_url:
+        st.caption("Territory polygons: live API (viewport requests to your hosted `/districts` endpoint).")
+    else:
+        st.caption(
+            "Territory polygons: bundled inline data. Set `API_BASE_URL` in Streamlit secrets, "
+            "or set the `API_BASE_URL` / `HILTI_API_BASE_URL` environment variable, to use the FastAPI map service."
+        )
 
 
 def render_app_frame(

@@ -8,7 +8,13 @@ from controllers.filters import apply_filters, get_focus_record
 from models.district_data import build_map_frame, load_prototype_geo_dataframe
 from models.scoring import score_thi, summarize_metric
 from components.map_component import render_leaflet_metric_map
-from components.shared import render_metric_cards, render_ranking_bar, render_thi_controls, resolve_api_base_url
+from components.shared import (
+    map_data_source_caption,
+    render_metric_cards,
+    render_ranking_bar,
+    render_thi_controls,
+    resolve_api_base_url,
+)
 
 
 def render_page(filters: dict[str, object]) -> None:
@@ -49,6 +55,7 @@ def render_page(filters: dict[str, object]) -> None:
             st.caption(
                 "This page is the research-facing sandbox. For now it uses a weighted-sum MCDA prototype over synthetic criteria, so the pipeline can be discussed before the post-meeting THI definition is finalized."
             )
+            map_data_source_caption(api_base_url)
             render_leaflet_metric_map(
                 geojson_data=geojson_data,
                 metric_key="thi_score",
