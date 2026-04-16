@@ -6,6 +6,8 @@ import geopandas as gpd
 def apply_filters(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> gpd.GeoDataFrame:
     """Narrow the frame; returns the same object when no filters apply (saves a full copy)."""
     out: gpd.GeoDataFrame = gdf
+    if filters.get("post_area") and filters["post_area"] != "All" and "PostArea" in out.columns:
+        out = out.loc[out["PostArea"] == filters["post_area"]]
     if filters.get("sprawl") and filters["sprawl"] != "All":
         out = out.loc[out["Sprawl"] == filters["sprawl"]]
     if filters.get("district") and filters["district"] != "All":

@@ -11,12 +11,14 @@ import pandas as pd
 from fastapi import APIRouter, Query, Response
 from mapbox_vector_tile import encode
 from mapbox_vector_tile.encoder import on_invalid_geometry_ignore
+from starlette.concurrency import run_in_threadpool
 
 from controllers.filters import apply_filters
 from models.district_data import GEOM_MAP_LOW, GEOM_MAP_MID, build_api_map_frame
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
 from .scoring_cache import get_scored_geo_dataframe
+from .spatial import clip_to_bounds
 
 router = APIRouter(tags=["tiles"])
 
@@ -102,7 +104,7 @@ def _mvt_properties(row: pd.Series) -> dict[str, Any]:
 
 
 @router.get("/tiles/{z}/{x}/{y}.mvt")
-def district_vector_tile(
+async def district_vector_tile(
     z: int,
     x: int,
     y: int,
@@ -118,7 +120,7 @@ def district_vector_tile(
     w_pis: Annotated[float | None, Query()] = None,
 ) -> Response:
     if z < 0 or z > 14 or x < 0 or y < 0:
-        return Response(content=b"", media_type="application/vnd.mapbox-vector-tile")
+        return _tile_response(b"")
 
     tile = mercantile.Tile(x, y, z)
     west, south, east, north = mercantile.bounds(tile)
@@ -127,13 +129,47 @@ def district_vector_tile(
 
     weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
     cache_key = (
-        f"{z}:{x}:{y}:{sprawl}:{district}:{segment}:{active}:"
+        f"{z}:{x}:{y}:{post_area}:{sprawl}:{district}:{segment}:{active}:"
         f"{weights['mps']:.4f}:{weights['cas']:.4f}:{weights['cps']:.4f}:{weights['gii']:.4f}:{weights['pis']:.4f}"
     )
     hit = _mvt_cache_get(cache_key)
     if hit is not None:
-        return Response(content=hit, media_type="application/vnd.mapbox-vector-tile")
+        return _tile_response(hit)
 
+    body = await run_in_threadpool(
+        _build_tile_body,
+        z,
+        west,
+        south,
+        east,
+        north,
+        quant,
+        post_area,
+        sprawl,
+        district,
+        segment,
+        active,
+        weights,
+    )
+    if len(body) < 900_000:
+        _mvt_cache_set(cache_key, body)
+    return _tile_response(body)
+
+
+def _build_tile_body(
+    z: int,
+    west: float,
+    south: float,
+    east: float,
+    north: float,
+    quant: tuple[float, float, float, float],
+    post_area: str,
+    sprawl: str,
+    district: str,
+    segment: str,
+    active: str,
+    weights: dict[str, float],
+) -> bytes:
     base = get_mvt_base()
     active_keys = _parse_active_keys(active)
     scored = get_scored_geo_dataframe(base, weights, active_keys)
@@ -142,18 +178,20 @@ def district_vector_tile(
         {"post_area": post_area, "sprawl": sprawl, "district": district, "segment": segment},
     )
     pad = 0.0012 * (14 - min(z, 14) + 1)
-    viewport = filtered.cx[west - pad : east + pad, south - pad : north + pad]
+    viewport = clip_to_bounds(filtered, west, south, east, north, pad=pad)
     if viewport.empty:
-        body = encode(
+        return encode(
             [{"name": "districts", "features": []}],
             per_layer_options={"districts": {"quantize_bounds": quant, "on_invalid_geometry": on_invalid_geometry_ignore}},
         )
-        _mvt_cache_set(cache_key, body)
-        return Response(content=body, media_type="application/vnd.mapbox-vector-tile")
 
     col = _geom_column_for_tile(z)
     if col and col in viewport.columns:
-        plot_gdf = viewport.set_geometry(col, crs=viewport.crs)
+        plot_gdf = gpd.GeoDataFrame(
+            viewport.drop(columns=[GEOM_MAP_LOW, GEOM_MAP_MID], errors="ignore").copy(),
+            geometry=viewport[col],
+            crs=viewport.crs,
+        )
     else:
         plot_gdf = build_api_map_frame(
             viewport,
@@ -172,7 +210,7 @@ def district_vector_tile(
         except Exception:
             continue
 
-    body = encode(
+    return encode(
         [{"name": "districts", "features": feats}],
         per_layer_options={
             "districts": {
@@ -182,6 +220,15 @@ def district_vector_tile(
             }
         },
     )
-    if len(body) < 900_000:
-        _mvt_cache_set(cache_key, body)
-    return Response(content=body, media_type="application/vnd.mapbox-vector-tile")
+
+
+def _tile_response(body: bytes) -> Response:
+    return Response(
+        content=body,
+        media_type="application/vnd.mapbox-vector-tile",
+        headers={
+            "Cache-Control": "public, max-age=300, s-maxage=900, stale-while-revalidate=86400",
+            "Vary": "Accept-Encoding, Origin",
+            "X-Map-Backend": "districts-mvt",
+        },
+    )

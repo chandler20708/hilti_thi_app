@@ -19,6 +19,7 @@ def _tile_query_string(
     w = weights or {}
     active = active_keys or []
     pairs = [
+        ("post_area", str(f.get("post_area", "All"))),
         ("sprawl", str(f.get("sprawl", "All"))),
         ("district", str(f.get("district", "All"))),
         ("segment", str(f.get("segment", "All"))),

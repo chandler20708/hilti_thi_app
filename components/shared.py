@@ -74,7 +74,7 @@ def _parse_boolish(raw: object | None) -> bool | None:
 
 
 def resolve_use_vector_tiles() -> bool:
-    """Use MapLibre + MVT when True; default False (Leaflet + `/districts` is lighter for small APIs)."""
+    """Use MapLibre + MVT when True; default True when an API is available."""
     for key in ("HILTI_USE_VECTOR_TILES", "USE_VECTOR_TILES"):
         hit = _parse_boolish(os.getenv(key))
         if hit is not None:
@@ -104,7 +104,7 @@ def resolve_use_vector_tiles() -> bool:
                     return hit
     except Exception:
         pass
-    return False
+    return True
 
 
 def resolve_api_base_url() -> str:
@@ -152,12 +152,12 @@ def map_data_source_caption(api_base_url: str) -> None:
         if resolve_use_vector_tiles():
             st.caption(
                 "Territory polygons: MapLibre vector tiles from your API `/tiles/{z}/{x}/{y}.mvt` "
-                "(set `HILTI_USE_VECTOR_TILES=0` to use faster Leaflet + `/districts` viewport requests)."
+                "(set `HILTI_USE_VECTOR_TILES=0` only if you want the legacy Leaflet + `/districts` viewport mode)."
             )
         else:
             st.caption(
-                "Territory polygons: live API (viewport requests to your hosted `/districts` endpoint). "
-                "Optional: set `HILTI_USE_VECTOR_TILES=1` to try MapLibre vector tiles instead."
+                "Territory polygons: live API (Leaflet viewport requests to your hosted `/districts` endpoint). "
+                "Set `HILTI_USE_VECTOR_TILES=1` to switch back to the default MapLibre vector-tile mode."
             )
     else:
         st.caption(

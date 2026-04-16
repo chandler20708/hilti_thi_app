@@ -95,7 +95,11 @@ def render_page() -> None:
     with left:
         with st.container(border=True):
             st.subheader(f"{metric_meta['label']} Map")
-            overview_note = " National overview uses point mode for faster loading." if controls["city"] == "All" else ""
+            overview_note = (
+                " National overview uses point mode for faster inline loading."
+                if controls["city"] == "All" and not api_base_url
+                else ""
+            )
             st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.{overview_note}")
             map_data_source_caption(api_base_url)
             render_leaflet_metric_map(

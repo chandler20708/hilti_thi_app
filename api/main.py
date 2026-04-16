@@ -7,6 +7,7 @@ import geopandas as gpd
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.gzip import GZipMiddleware
 
 from .query_cache import BytesTTLCache
@@ -17,6 +18,7 @@ from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
 from .mvt_tiles import router as mvt_router, set_mvt_base
 from .scoring_cache import get_scored_geo_dataframe
+from .spatial import clip_to_bounds
 
 app = FastAPI(title="Hilti Territory Map API")
 
@@ -45,6 +47,7 @@ app.include_router(mvt_router)
 @app.on_event("startup")
 def _load_base_dataframe() -> None:
     app.state.base_gdf = load_prototype_geo_dataframe()
+    _ = app.state.base_gdf.sindex
     set_mvt_base(app.state.base_gdf)
 
 
@@ -59,7 +62,7 @@ def _districts_cache_key(request: Request) -> str:
 
 
 @app.get("/districts")
-def districts(
+async def districts(
     request: Request,
     west: Annotated[float | None, Query()] = None,
     south: Annotated[float | None, Query()] = None,
@@ -80,9 +83,50 @@ def districts(
     cache_key = _districts_cache_key(request)
     cached = _DISTRICTS_CACHE.get(cache_key)
     if cached is not None:
-        return Response(content=cached, media_type="application/json")
+        return _districts_response(cached)
 
     gdf: gpd.GeoDataFrame = app.state.base_gdf
+    body = await run_in_threadpool(
+        _build_districts_body,
+        gdf,
+        west,
+        south,
+        east,
+        north,
+        zoom,
+        post_area,
+        sprawl,
+        district,
+        segment,
+        active,
+        w_mps,
+        w_cas,
+        w_cps,
+        w_gii,
+        w_pis,
+    )
+    _DISTRICTS_CACHE.set(cache_key, body)
+    return _districts_response(body)
+
+
+def _build_districts_body(
+    gdf: gpd.GeoDataFrame,
+    west: float | None,
+    south: float | None,
+    east: float | None,
+    north: float | None,
+    zoom: int,
+    post_area: str,
+    sprawl: str,
+    district: str,
+    segment: str,
+    active: str,
+    w_mps: float | None,
+    w_cas: float | None,
+    w_cps: float | None,
+    w_gii: float | None,
+    w_pis: float | None,
+) -> bytes:
     weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
     active_keys = _parse_active_keys(active)
     scored = get_scored_geo_dataframe(gdf, weights, active_keys)
@@ -96,9 +140,19 @@ def districts(
         },
     )
     viewport = _apply_bbox(filtered, west, south, east, north, zoom)
-    body = build_api_map_frame(viewport, zoom).to_json().encode("utf-8")
-    _DISTRICTS_CACHE.set(cache_key, body)
-    return Response(content=body, media_type="application/json")
+    return build_api_map_frame(viewport, zoom).to_json().encode("utf-8")
+
+
+def _districts_response(body: bytes) -> Response:
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers={
+            "Cache-Control": "public, max-age=30, s-maxage=120, stale-while-revalidate=300",
+            "Vary": "Accept-Encoding, Origin",
+            "X-Map-Backend": "districts-json",
+        },
+    )
 
 
 def _parse_active_keys(active: str) -> list[str]:
@@ -138,7 +192,7 @@ def _apply_bbox(
     if None in {west, south, east, north}:
         return gdf
     pad = _padding_for_zoom(zoom)
-    return gdf.cx[west - pad : east + pad, south - pad : north + pad]
+    return clip_to_bounds(gdf, west, south, east, north, pad=pad)
 
 
 def _padding_for_zoom(zoom: int) -> float:

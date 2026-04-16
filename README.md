@@ -157,9 +157,15 @@ The workflow `.github/workflows/keep-warm.yml` runs on a cron schedule and **GET
 
 Scheduled workflows only run on the **default** branch and GitHub may **disable** them after long repository inactivity; re-enable under **Actions** if needed.
 
-The FastAPI service **caches identical `/districts` query strings** briefly (small entry cap for 512MB plans) and enables **gzip** for JSON responses.
+The FastAPI service now uses:
 
-When `API_BASE_URL` is set, the Streamlit map uses **MapLibre GL** and loads **vector tiles** from `GET /tiles/{z}/{x}/{y}.mvt` (only the visible map tiles are built and transferred, which scales much better than one national GeoJSON). The legacy **Leaflet + GeoJSON** path remains when no API URL is configured.
+- **spatial-index clipping** before precise geometry intersects
+- **gzip compression** for API responses
+- short-lived **query/tile caches** in-process
+- **CDN-friendly cache headers** on `/districts` and `/tiles`
+- one cached **scored national frame** per process so repeated pans do not rerun THI on every request
+
+When `API_BASE_URL` is set, the Streamlit map now defaults to **MapLibre GL** and loads **vector tiles** from `GET /tiles/{z}/{x}/{y}.mvt` (only the visible map tiles are built and transferred, which scales much better than one national GeoJSON). Set `HILTI_USE_VECTOR_TILES=0` only if you want the legacy **Leaflet + `/districts`** viewport mode.
 
 **Pre-simplified map geometries (recommended on 512MB):** run once from the app root after installing dependencies:
 
@@ -167,7 +173,7 @@ When `API_BASE_URL` is set, the Streamlit map uses **MapLibre GL** and loads **v
 python scripts/enrich_district_geometries.py
 ```
 
-That adds `geom_map_low` / `geom_map_mid` to `data/UK_postcode_districts.parquet` (a `.bak` copy is created first). The API and MVT paths use those columns when present so runtime simplify and RAM stay lower.
+That adds `geom_map_low` / `geom_map_mid` to `data/UK_postcode_districts.parquet` (a `.bak` copy is created first). The API and MVT paths use those precomputed zoom-level geometries when present so runtime simplify cost and RAM stay lower.
 
 **Scoring cache:** the API keeps **one** in-memory copy of the fully scored national frame per process so MVT tiles and `/districts` do not re-run the THI pipeline on every pan. That uses extra RAM; if a host OOMs, set environment variable `HILTI_DISABLE_SCORING_CACHE=1` on the API service to opt out.
 
