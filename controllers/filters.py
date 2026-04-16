@@ -1,22 +1,28 @@
 from __future__ import annotations
 
 import geopandas as gpd
+import pandas as pd
+
+
+def build_filter_mask(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> pd.Series:
+    mask = pd.Series(True, index=gdf.index)
+    if filters.get("post_area") and filters["post_area"] != "All" and "PostArea" in gdf.columns:
+        mask &= gdf["PostArea"] == filters["post_area"]
+    if filters.get("sprawl") and filters["sprawl"] != "All":
+        mask &= gdf["Sprawl"] == filters["sprawl"]
+    if filters.get("district") and filters["district"] != "All":
+        mask &= gdf["PostDist"] == filters["district"]
+    if filters.get("segment") and filters["segment"] != "All":
+        mask &= gdf["primary_segment"] == filters["segment"]
+    return mask
 
 
 def apply_filters(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> gpd.GeoDataFrame:
     """Narrow the frame; returns the same object when no filters apply (saves a full copy)."""
-    out: gpd.GeoDataFrame = gdf
-    if filters.get("post_area") and filters["post_area"] != "All" and "PostArea" in out.columns:
-        out = out.loc[out["PostArea"] == filters["post_area"]]
-    if filters.get("sprawl") and filters["sprawl"] != "All":
-        out = out.loc[out["Sprawl"] == filters["sprawl"]]
-    if filters.get("district") and filters["district"] != "All":
-        out = out.loc[out["PostDist"] == filters["district"]]
-    if filters.get("segment") and filters["segment"] != "All":
-        out = out.loc[out["primary_segment"] == filters["segment"]]
-    if out is gdf:
+    mask = build_filter_mask(gdf, filters)
+    if bool(mask.all()):
         return gdf
-    return out.copy()
+    return gdf.loc[mask].copy()
 
 
 def get_focus_record(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> dict[str, object] | None:

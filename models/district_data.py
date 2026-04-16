@@ -143,52 +143,12 @@ def build_map_frame(gdf: gpd.GeoDataFrame, city_scope: str) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(frame, geometry="geometry", crs="EPSG:4326")
 
 
-def map_simplification_tolerance(zoom: int) -> float:
-    if zoom <= 5:
-        return 0.05
-    if zoom == 6:
-        return 0.02
-    if zoom == 7:
-        return 0.008
-    if zoom == 8:
-        return 0.003
-    if zoom == 9:
-        return 0.0015
-    return 0.0005
-
-
-def _api_tolerance_cap(zoom: int) -> float:
-    """Max simplify tolerance (degrees, WGS84) allowed at this zoom before we clip."""
-    if zoom <= 4:
-        return 0.36
-    if zoom <= 5:
-        return 0.32
-    if zoom <= 6:
-        return 0.28
-    if zoom <= 7:
-        return 0.22
-    if zoom <= 8:
-        return 0.14
-    return 0.10
-
-
-def _api_polygon_tolerance(zoom: int, row_count: int) -> float:
-    """Strong LOD: coarser shapes when many districts are in view or zoom is low."""
-    base = map_simplification_tolerance(zoom)
-    # Low zoom: extra coarseness so country-scale views stay small without chunking.
-    if zoom <= 5:
-        base *= 1.45
-    elif zoom <= 6:
-        base *= 1.22
-    elif zoom <= 7 and row_count > 350:
-        base *= 1.12
-
-    if row_count <= 80:
-        return min(_api_tolerance_cap(zoom), base)
-
-    excess = row_count - 80
-    scale = 1.0 + min(20.0, excess / 105.0)
-    return min(_api_tolerance_cap(zoom), base * scale)
+def api_geometry_series(gdf: gpd.GeoDataFrame, zoom: int) -> gpd.GeoSeries:
+    if GEOM_MAP_LOW in gdf.columns and zoom <= 6:
+        return gdf[GEOM_MAP_LOW]
+    if GEOM_MAP_MID in gdf.columns and zoom <= 9:
+        return gdf[GEOM_MAP_MID]
+    return gdf.geometry
 
 
 def build_api_map_frame(
@@ -215,7 +175,7 @@ def build_api_map_frame(
         "thi_score",
     ]
     available_columns = [column for column in export_columns if column in gdf.columns]
-    frame = gdf.loc[:, available_columns + ["geometry"]].copy()
+    frame = gdf.loc[:, available_columns].copy()
     row_count = len(frame)
     # Prefer filled polygons; centroids only when counts stay extreme at low zoom even
     # after the strongest simplify caps above. MVT clients need polygons, so they pass
@@ -224,17 +184,9 @@ def build_api_map_frame(
         row_count > 3800 or (zoom <= 5 and row_count > 2600)
     )
     if use_point_overview:
-        frame["geometry"] = frame.geometry.representative_point()
+        frame["geometry"] = gdf.geometry.representative_point()
     else:
-        if GEOM_MAP_LOW in gdf.columns and zoom <= 6:
-            frame["geometry"] = gdf.loc[frame.index, GEOM_MAP_LOW]
-        elif GEOM_MAP_MID in gdf.columns and zoom <= 9:
-            frame["geometry"] = gdf.loc[frame.index, GEOM_MAP_MID]
-        else:
-            frame["geometry"] = frame.geometry.simplify(
-                tolerance=_api_polygon_tolerance(zoom, row_count),
-                preserve_topology=True,
-            )
+        frame["geometry"] = api_geometry_series(gdf, zoom).loc[frame.index]
     frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
 
     numeric_columns = [column for column in frame.columns if column != "geometry"]

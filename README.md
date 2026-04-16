@@ -160,12 +160,13 @@ Scheduled workflows only run on the **default** branch and GitHub may **disable*
 The FastAPI service now uses:
 
 - **spatial-index clipping** before precise geometry intersects
+- fast **orjson GeoJSON serialization** on `/districts`
 - **gzip compression** for API responses
 - short-lived **query/tile caches** in-process
 - **CDN-friendly cache headers** on `/districts` and `/tiles`
 - one cached **scored national frame** per process so repeated pans do not rerun THI on every request
 
-When `API_BASE_URL` is set, the Streamlit map now defaults to **MapLibre GL** and loads **vector tiles** from `GET /tiles/{z}/{x}/{y}.mvt` (only the visible map tiles are built and transferred, which scales much better than one national GeoJSON). Set `HILTI_USE_VECTOR_TILES=0` only if you want the legacy **Leaflet + `/districts`** viewport mode.
+When `API_BASE_URL` is set, the Streamlit map keeps **Leaflet + `/districts`** as the primary path for constrained hosts. **MapLibre GL** vector tiles from `GET /tiles/{z}/{x}/{y}.mvt` remain optional and experimental; set `HILTI_USE_VECTOR_TILES=1` only if you explicitly want to test them.
 
 **Pre-simplified map geometries (recommended on 512MB):** run once from the app root after installing dependencies:
 

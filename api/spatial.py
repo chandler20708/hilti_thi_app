@@ -12,6 +12,7 @@ def clip_to_bounds(
     north: float | None,
     *,
     pad: float = 0.0,
+    precise: bool = True,
 ) -> gpd.GeoDataFrame:
     """Use the GeoPandas spatial index first, then a precise intersect filter."""
     if None in {west, south, east, north}:
@@ -30,13 +31,15 @@ def clip_to_bounds(
 
     if not hits:
         try:
-            return gdf.cx[minx:maxx, miny:maxy].copy()
+            return gdf.cx[minx:maxx, miny:maxy]
         except Exception:
-            return gdf.iloc[0:0].copy()
+            return gdf.iloc[0:0]
 
     subset = gdf.iloc[hits]
+    if not precise:
+        return subset
     window = box(*bounds)
     try:
-        return subset.loc[subset.intersects(window)].copy()
+        return subset.loc[subset.intersects(window)]
     except Exception:
-        return subset.copy()
+        return subset

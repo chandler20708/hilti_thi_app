@@ -10,9 +10,10 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.gzip import GZipMiddleware
 
+from .filter_cache import get_filtered_geo_dataframe
+from .geojson import geojson_bytes_from_frame
 from .query_cache import BytesTTLCache
 from config import API_CORS_ORIGINS
-from controllers.filters import apply_filters
 from models.district_data import build_api_map_frame, load_prototype_geo_dataframe
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
@@ -22,8 +23,8 @@ from .spatial import clip_to_bounds
 
 app = FastAPI(title="Hilti Territory Map API")
 
-# Tight defaults for 512MB hosts: fewer/lighter cached bodies than before.
-_DISTRICTS_CACHE = BytesTTLCache(max_entries=10, ttl_seconds=45.0, max_entry_bytes=1_400_000)
+# Tight defaults for 512MB hosts: bigger hit rate without storing giant payloads.
+_DISTRICTS_CACHE = BytesTTLCache(max_entries=30, ttl_seconds=120.0, max_entry_bytes=1_400_000)
 
 
 def _allowed_origins() -> list[str]:
@@ -130,17 +131,15 @@ def _build_districts_body(
     weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
     active_keys = _parse_active_keys(active)
     scored = get_scored_geo_dataframe(gdf, weights, active_keys)
-    filtered = apply_filters(
-        scored,
-        {
-            "post_area": post_area,
-            "sprawl": sprawl,
-            "district": district,
-            "segment": segment,
-        },
-    )
+    filters = {
+        "post_area": post_area,
+        "sprawl": sprawl,
+        "district": district,
+        "segment": segment,
+    }
+    filtered = get_filtered_geo_dataframe(scored, filters, weights, active_keys)
     viewport = _apply_bbox(filtered, west, south, east, north, zoom)
-    return build_api_map_frame(viewport, zoom).to_json().encode("utf-8")
+    return geojson_bytes_from_frame(build_api_map_frame(viewport, zoom))
 
 
 def _districts_response(body: bytes) -> Response:
@@ -192,7 +191,7 @@ def _apply_bbox(
     if None in {west, south, east, north}:
         return gdf
     pad = _padding_for_zoom(zoom)
-    return clip_to_bounds(gdf, west, south, east, north, pad=pad)
+    return clip_to_bounds(gdf, west, south, east, north, pad=pad, precise=zoom >= 7)
 
 
 def _padding_for_zoom(zoom: int) -> float:
