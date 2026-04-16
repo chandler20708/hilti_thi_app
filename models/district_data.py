@@ -146,11 +146,19 @@ def map_simplification_tolerance(zoom: int) -> float:
     return 0.0005
 
 
+def _api_polygon_tolerance(zoom: int, row_count: int) -> float:
+    """Coarser simplification when many districts are in view (e.g. UK-wide API calls)."""
+    base = map_simplification_tolerance(zoom)
+    if row_count <= 120:
+        return base
+    excess = row_count - 120
+    scale = 1.0 + min(14.0, excess / 140.0)
+    return min(0.22, base * scale)
+
+
 def build_api_map_frame(
     gdf: gpd.GeoDataFrame,
     zoom: int,
-    *,
-    sprawl: str = "All",
 ) -> gpd.GeoDataFrame:
     export_columns = [
         "PostDist",
@@ -172,14 +180,14 @@ def build_api_map_frame(
     available_columns = [column for column in export_columns if column in gdf.columns]
     frame = gdf.loc[:, available_columns + ["geometry"]].copy()
     row_count = len(frame)
-    # Match ``build_map_frame``: national / unscoped city uses points so responses stay
-    # small enough for browser fetches (full UK polygons would exceed limits and fail).
-    use_point_overview = sprawl == "All" or row_count > 900
+    # Prefer filled polygons (like city-scoped views). Only fall back to centroids when
+    # the feature count is so high that even aggressive simplification risks timeouts.
+    use_point_overview = row_count > 3200
     if use_point_overview:
         frame["geometry"] = frame.geometry.representative_point()
     else:
         frame["geometry"] = frame.geometry.simplify(
-            tolerance=map_simplification_tolerance(zoom),
+            tolerance=_api_polygon_tolerance(zoom, row_count),
             preserve_topology=True,
         )
     frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)

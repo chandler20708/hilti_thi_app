@@ -331,7 +331,8 @@ def render_leaflet_metric_map(
             }});
 
             const count = geojson.features ? geojson.features.length : 0;
-            loadingEl.textContent = (fromRefresh ? "Refreshed " : "Loaded ") + count + " district polygons";
+            const mode = hasPolygonGeometry ? "districts (filled)" : "districts (overview points)";
+            loadingEl.textContent = (fromRefresh ? "Refreshed " : "Loaded ") + count + " " + mode;
         }}
 
         async function refreshFromApi() {{
