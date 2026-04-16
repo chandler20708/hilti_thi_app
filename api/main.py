@@ -73,7 +73,7 @@ def districts(
         },
     )
     viewport = _apply_bbox(filtered, west, south, east, north, zoom)
-    payload = json.loads(build_api_map_frame(viewport, zoom).to_json())
+    payload = json.loads(build_api_map_frame(viewport, zoom, sprawl=sprawl).to_json())
     return JSONResponse(payload)
 
 

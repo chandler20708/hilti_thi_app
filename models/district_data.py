@@ -146,7 +146,12 @@ def map_simplification_tolerance(zoom: int) -> float:
     return 0.0005
 
 
-def build_api_map_frame(gdf: gpd.GeoDataFrame, zoom: int) -> gpd.GeoDataFrame:
+def build_api_map_frame(
+    gdf: gpd.GeoDataFrame,
+    zoom: int,
+    *,
+    sprawl: str = "All",
+) -> gpd.GeoDataFrame:
     export_columns = [
         "PostDist",
         "PostArea",
@@ -166,10 +171,17 @@ def build_api_map_frame(gdf: gpd.GeoDataFrame, zoom: int) -> gpd.GeoDataFrame:
     ]
     available_columns = [column for column in export_columns if column in gdf.columns]
     frame = gdf.loc[:, available_columns + ["geometry"]].copy()
-    frame["geometry"] = frame.geometry.simplify(
-        tolerance=map_simplification_tolerance(zoom),
-        preserve_topology=True,
-    )
+    row_count = len(frame)
+    # Match ``build_map_frame``: national / unscoped city uses points so responses stay
+    # small enough for browser fetches (full UK polygons would exceed limits and fail).
+    use_point_overview = sprawl == "All" or row_count > 900
+    if use_point_overview:
+        frame["geometry"] = frame.geometry.representative_point()
+    else:
+        frame["geometry"] = frame.geometry.simplify(
+            tolerance=map_simplification_tolerance(zoom),
+            preserve_topology=True,
+        )
     frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
 
     numeric_columns = [column for column in frame.columns if column != "geometry"]
