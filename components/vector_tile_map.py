@@ -70,11 +70,25 @@ def render_vector_tile_map(
           position: relative; width: 100%; height: {height}px;
           border-radius: 18px; border: 1px solid rgba(16,24,40,0.08); overflow: hidden;
         }}
+        .badge {{
+          position: absolute; left: 12px; top: 12px; z-index: 2;
+          background: rgba(17,24,39,0.92); color: #fff; border-radius: 12px; padding: 7px 10px;
+          font: 12px/1.3 sans-serif;
+        }}
         .loading {{
           position: absolute; right: 12px; top: 12px; z-index: 2;
           background: rgba(255,255,255,0.96); border-radius: 12px; padding: 7px 10px;
           font: 12px/1.3 sans-serif; color: #344054;
+          max-width: min(420px, 92vw);
+          text-align: right;
         }}
+        .recenter-btn {{
+          position: absolute; right: 12px; top: 48px; z-index: 2;
+          background: rgba(17,24,39,0.94); color: #ffffff; border: none; border-radius: 12px;
+          padding: 8px 12px; font: 12px/1.2 sans-serif; cursor: pointer;
+          box-shadow: 0 8px 24px rgba(15,23,42,0.18);
+        }}
+        .recenter-btn:hover {{ background: rgba(31,41,55,0.98); }}
         .legend {{
           position: absolute; right: 12px; bottom: 12px; z-index: 2;
           background: rgba(255,255,255,0.96); padding: 10px 12px; border-radius: 12px;
@@ -89,7 +103,9 @@ def render_vector_tile_map(
     </head>
     <body>
       <div class="wrap">
-        <div id="loading" class="loading">Loading vector map…</div>
+        <div class="badge">Executive territory view</div>
+        <div id="loading" class="loading">Loading district tiles…</div>
+        <button type="button" id="recenterBtn" class="recenter-btn">Recenter map</button>
         <div class="legend">
           <div><strong>{html_module.escape(metric_label)}</strong></div>
           <div class="legend-scale"></div>
@@ -105,6 +121,7 @@ def render_vector_tile_map(
         const metricKey = {json.dumps(metric_key)};
         const stores = state.store_locations || [];
         const loadingEl = document.getElementById("loading");
+        const recenterBtn = document.getElementById("recenterBtn");
 
         const defaultBounds = [[-8.2, 49.8], [2.2, 60.9]];
 
@@ -112,6 +129,20 @@ def render_vector_tile_map(
           if (!focus || !focus.bounds) return null;
           const b = focus.bounds;
           return [[b[0][1], b[0][0]], [b[1][1], b[1][0]]];
+        }}
+
+        function refreshStatus() {{
+          try {{
+            const feats = map.querySourceFeatures("districts", {{ sourceLayer: "districts" }});
+            const n = feats.length;
+            if (!n) {{
+              loadingEl.textContent = "Loading district tiles…";
+              return;
+            }}
+            loadingEl.textContent = "Loaded " + n + " districts in view (vector, filled)";
+          }} catch (err) {{
+            loadingEl.textContent = "Loading district tiles…";
+          }}
         }}
 
         const map = new maplibregl.Map({{
@@ -144,7 +175,7 @@ def render_vector_tile_map(
           }});
 
           const fillColor = [
-            "interpolate", ["linear"], ["coalesce", ["get", metricKey], 0],
+            "interpolate", ["linear"], ["to-number", ["coalesce", ["get", metricKey], 0]],
             0, "#ea4335",
             50, "#fbbc04",
             100, "#34a853"
@@ -160,9 +191,22 @@ def render_vector_tile_map(
             paint: {{
               "fill-color": fillColor,
               "fill-opacity": fd ? [
-                "case", ["==", ["get", "post_dist"], fd], 0.78, 0.52
-              ] : 0.55,
-              "fill-outline-color": "#4b2e17"
+                "case", ["==", ["get", "post_dist"], fd], 0.78, 0.58
+              ] : 0.58,
+              "fill-outline-color": "#4b2e17",
+              "fill-antialias": true
+            }}
+          }});
+
+          map.addLayer({{
+            id: "district-line",
+            type: "line",
+            source: "districts",
+            "source-layer": "districts",
+            paint: {{
+              "line-color": "#4b2e17",
+              "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.35, 8, 0.75, 12, 1.1],
+              "line-opacity": 0.55
             }}
           }});
 
@@ -188,8 +232,18 @@ def render_vector_tile_map(
             map.fitBounds(defaultBounds, {{ padding: 24, duration: 0 }});
           }}
 
-          loadingEl.textContent = "Vector map ready";
-          setTimeout(() => {{ loadingEl.style.display = "none"; }}, 1200);
+          recenterBtn.addEventListener("click", () => {{
+            const t = focusLngLatBounds();
+            if (t) map.fitBounds(t, {{ padding: 40, maxZoom: 11, duration: 0 }});
+            else map.fitBounds(defaultBounds, {{ padding: 24, duration: 0 }});
+            setTimeout(() => refreshStatus(), 200);
+          }});
+
+          map.on("idle", () => refreshStatus());
+          map.on("moveend", () => refreshStatus());
+          map.on("sourcedata", (e) => {{
+            if (e.sourceId === "districts" && e.isSourceLoaded) refreshStatus();
+          }});
         }});
 
         map.on("error", (e) => {{

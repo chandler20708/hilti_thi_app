@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Annotated
+from typing import Annotated, Any
 
 import geopandas as gpd
 import mercantile
@@ -155,7 +155,11 @@ def district_vector_tile(
     if col and col in viewport.columns:
         plot_gdf = viewport.set_geometry(col, crs=viewport.crs)
     else:
-        plot_gdf = build_api_map_frame(viewport, max(6, min(z, 12)))
+        plot_gdf = build_api_map_frame(
+            viewport,
+            max(6, min(z, 12)),
+            allow_centroid_fallback=False,
+        )
 
     plot_3857 = plot_gdf.to_crs(3857)
     feats: list[dict[str, object]] = []
@@ -174,7 +178,7 @@ def district_vector_tile(
             "districts": {
                 "quantize_bounds": quant,
                 "on_invalid_geometry": on_invalid_geometry_ignore,
-                "check_winding_order": True,
+                "check_winding_order": False,
             }
         },
     )

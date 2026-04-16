@@ -194,6 +194,8 @@ def _api_polygon_tolerance(zoom: int, row_count: int) -> float:
 def build_api_map_frame(
     gdf: gpd.GeoDataFrame,
     zoom: int,
+    *,
+    allow_centroid_fallback: bool = True,
 ) -> gpd.GeoDataFrame:
     export_columns = [
         "PostDist",
@@ -216,8 +218,11 @@ def build_api_map_frame(
     frame = gdf.loc[:, available_columns + ["geometry"]].copy()
     row_count = len(frame)
     # Prefer filled polygons; centroids only when counts stay extreme at low zoom even
-    # after the strongest simplify caps above.
-    use_point_overview = row_count > 3800 or (zoom <= 5 and row_count > 2600)
+    # after the strongest simplify caps above. MVT clients need polygons, so they pass
+    # ``allow_centroid_fallback=False``.
+    use_point_overview = allow_centroid_fallback and (
+        row_count > 3800 or (zoom <= 5 and row_count > 2600)
+    )
     if use_point_overview:
         frame["geometry"] = frame.geometry.representative_point()
     else:
