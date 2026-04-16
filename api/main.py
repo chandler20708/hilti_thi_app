@@ -13,7 +13,10 @@ from .query_cache import BytesTTLCache
 from config import API_CORS_ORIGINS
 from controllers.filters import apply_filters
 from models.district_data import build_api_map_frame, load_prototype_geo_dataframe
-from models.scoring import DEFAULT_WEIGHTS, factor_catalog, score_thi
+from models.scoring import DEFAULT_WEIGHTS, factor_catalog
+
+from .mvt_tiles import router as mvt_router, set_mvt_base
+from .scoring_cache import get_scored_geo_dataframe
 
 app = FastAPI(title="Hilti Territory Map API")
 
@@ -36,10 +39,13 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=800)
 
+app.include_router(mvt_router)
+
 
 @app.on_event("startup")
 def _load_base_dataframe() -> None:
     app.state.base_gdf = load_prototype_geo_dataframe()
+    set_mvt_base(app.state.base_gdf)
 
 
 @app.get("/health")
@@ -79,7 +85,7 @@ def districts(
     gdf: gpd.GeoDataFrame = app.state.base_gdf
     weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
     active_keys = _parse_active_keys(active)
-    scored = score_thi(gdf, weights, active_keys)
+    scored = get_scored_geo_dataframe(gdf, weights, active_keys)
     filtered = apply_filters(
         scored,
         {

@@ -29,6 +29,11 @@ MAP_PAYLOAD_RENAMES = {
     "Sprawl": "sprawl",
 }
 
+# Optional columns written by ``scripts/enrich_district_geometries.py`` (coarser WGS84
+# polygons built offline so runtime simplify + RAM stay lower).
+GEOM_MAP_LOW = "geom_map_low"
+GEOM_MAP_MID = "geom_map_mid"
+
 
 def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
     valid = series.dropna()
@@ -120,18 +125,20 @@ def build_map_frame(gdf: gpd.GeoDataFrame, city_scope: str) -> gpd.GeoDataFrame:
     if use_point_overview:
         frame["geometry"] = frame.geometry.representative_point()
     else:
-        if row_count > 700:
-            tolerance = 0.018
-        elif row_count > 400:
-            tolerance = 0.012
-        elif row_count > 220:
-            tolerance = 0.006
-        elif row_count > 120:
-            tolerance = 0.004
+        if GEOM_MAP_MID in gdf.columns and row_count > 180:
+            frame["geometry"] = gdf.loc[frame.index, GEOM_MAP_MID]
         else:
-            tolerance = 0.0015
-        frame["geometry"] = frame.geometry.simplify(tolerance=tolerance, preserve_topology=True)
-
+            if row_count > 700:
+                tolerance = 0.018
+            elif row_count > 400:
+                tolerance = 0.012
+            elif row_count > 220:
+                tolerance = 0.006
+            elif row_count > 120:
+                tolerance = 0.004
+            else:
+                tolerance = 0.0015
+            frame["geometry"] = frame.geometry.simplify(tolerance=tolerance, preserve_topology=True)
     frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
     return gpd.GeoDataFrame(frame, geometry="geometry", crs="EPSG:4326")
 
@@ -214,10 +221,15 @@ def build_api_map_frame(
     if use_point_overview:
         frame["geometry"] = frame.geometry.representative_point()
     else:
-        frame["geometry"] = frame.geometry.simplify(
-            tolerance=_api_polygon_tolerance(zoom, row_count),
-            preserve_topology=True,
-        )
+        if GEOM_MAP_LOW in gdf.columns and zoom <= 6:
+            frame["geometry"] = gdf.loc[frame.index, GEOM_MAP_LOW]
+        elif GEOM_MAP_MID in gdf.columns and zoom <= 9:
+            frame["geometry"] = gdf.loc[frame.index, GEOM_MAP_MID]
+        else:
+            frame["geometry"] = frame.geometry.simplify(
+                tolerance=_api_polygon_tolerance(zoom, row_count),
+                preserve_topology=True,
+            )
     frame = frame.rename(columns=MAP_PAYLOAD_RENAMES)
 
     numeric_columns = [column for column in frame.columns if column != "geometry"]
