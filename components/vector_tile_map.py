@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import html
+import html as html_module
 import json
 from urllib.parse import urlencode
 from uuid import uuid4
@@ -54,7 +54,7 @@ def render_vector_tile_map(
     tile_qs = _tile_query_string(filters, weights, active_keys)
     focus = focus_record
 
-    html = f"""
+    map_html = f"""
     <!DOCTYPE html>
     <html>
     <head>
@@ -91,7 +91,7 @@ def render_vector_tile_map(
       <div class="wrap">
         <div id="loading" class="loading">Loading vector map…</div>
         <div class="legend">
-          <div><strong>{html.escape(metric_label)}</strong></div>
+          <div><strong>{html_module.escape(metric_label)}</strong></div>
           <div class="legend-scale"></div>
           <div style="display:flex;justify-content:space-between;"><span>Low</span><span>High</span></div>
         </div>
@@ -199,4 +199,4 @@ def render_vector_tile_map(
     </body>
     </html>
     """
-    components.html(html, height=height + 6)
+    components.html(map_html, height=height + 6)
