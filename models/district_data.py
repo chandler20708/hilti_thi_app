@@ -34,6 +34,16 @@ MAP_PAYLOAD_RENAMES = {
 # polygons built offline so runtime simplify + RAM stay lower).
 GEOM_MAP_LOW = "geom_map_low"
 GEOM_MAP_MID = "geom_map_mid"
+SEGMENT_MODE_COLUMNS = {
+    "primary_segment": "primary_segment",
+    "customer_class": "customer_class",
+    "engagement_mode": "engagement_mode",
+}
+SEGMENT_MODE_LABELS = {
+    "primary_segment": "Primary Segment",
+    "customer_class": "Customer Class",
+    "engagement_mode": "Engagement Mode",
+}
 
 
 def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
@@ -46,6 +56,40 @@ def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
 
     result = pd.Series(np.nan, index=series.index, dtype="float64")
     result.loc[valid.index] = skewed
+    return result
+
+
+def _customer_class(series: pd.Series) -> pd.Series:
+    valid = series.dropna()
+    result = pd.Series("Class D", index=series.index, dtype="object")
+    if valid.empty:
+        return result
+
+    percentile = valid.rank(method="average", pct=True)
+    result.loc[percentile.index] = "Class C"
+    result.loc[percentile[percentile >= 0.50].index] = "Class B"
+    result.loc[percentile[percentile >= 0.75].index] = "Class A"
+    return result
+
+
+def _engagement_mode(
+    existing_accounts: pd.Series,
+    lead_volume: pd.Series,
+    loyalty_strength: pd.Series,
+) -> pd.Series:
+    existing = existing_accounts.fillna(0.0)
+    leads = lead_volume.fillna(0.0)
+    loyalty = loyalty_strength.fillna(0.0)
+    total = (existing + leads).replace(0, 1.0)
+    lead_share = leads / total
+    existing_pct = existing.rank(method="average", pct=True)
+    lead_pct = leads.rank(method="average", pct=True)
+    loyalty_pct = loyalty.rank(method="average", pct=True)
+
+    result = pd.Series("Developing", index=existing_accounts.index, dtype="object")
+    result.loc[(lead_share >= 0.52) & (lead_pct >= 0.50)] = "FTC"
+    result.loc[(existing_pct >= 0.62) & (loyalty_pct >= 0.45) & (lead_share < 0.42)] = "Engaged"
+    result.loc[(existing_pct >= 0.42) & (lead_pct >= 0.42)] = "Mixed"
     return result
 
 
@@ -95,6 +139,12 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
 
     synthetic_rows = merged.apply(build_synthetic_metrics, axis=1, result_type="expand")
     merged = pd.concat([merged, synthetic_rows], axis=1)
+    merged["customer_class"] = _customer_class(merged["market_opportunity_score"])
+    merged["engagement_mode"] = _engagement_mode(
+        merged["existing_accounts"],
+        merged["lead_volume"],
+        merged["loyalty_strength"],
+    )
 
     merged["retention_health"] = 100.0 - merged["retention_risk"]
     merged["market_opportunity_raw_score"] = merged["market_opportunity_score"]
@@ -113,6 +163,12 @@ def get_filter_options(gdf: gpd.GeoDataFrame) -> dict[str, list[str]]:
         "districts": ["All"] + sorted(gdf["PostDist"].dropna().unique().tolist()),
         "sprawls": ["All"] + sorted(gdf["Sprawl"].dropna().unique().tolist()),
         "segments": ["All"] + sorted(gdf["primary_segment"].dropna().unique().tolist()),
+        "segment_modes": SEGMENT_MODE_LABELS,
+        "segments_by_mode": {
+            mode: ["All"] + sorted(gdf[column].dropna().unique().tolist())
+            for mode, column in SEGMENT_MODE_COLUMNS.items()
+            if column in gdf.columns
+        },
     }
 
 

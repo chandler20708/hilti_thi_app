@@ -27,11 +27,17 @@ METRIC_CONFIG = {
 }
 
 
-def build_analysis_filters(city: str, segment: str, district: str = "All") -> dict[str, str]:
+def build_analysis_filters(
+    city: str,
+    segment: str,
+    district: str = "All",
+    segment_mode: str = "primary_segment",
+) -> dict[str, str]:
     return {
         "district": district,
         "sprawl": city,
         "segment": segment,
+        "segment_mode": segment_mode,
     }
 
 
@@ -184,7 +190,8 @@ def render_app_frame(
 
 def render_sidebar_controls(
     city_options: list[str],
-    segment_options: list[str],
+    segment_modes: dict[str, str],
+    segments_by_mode: dict[str, list[str]],
     territories_by_city: dict[str, list[str]],
     default_city: str,
 ) -> dict[str, str]:
@@ -217,19 +224,31 @@ def render_sidebar_controls(
             key="sidebar_territory",
             help="Use this as a search tool when you want to jump directly to a territory.",
         )
+        segment_mode_keys = list(segment_modes.keys())
+        if st.session_state.get("sidebar_segment_mode") not in segment_mode_keys:
+            st.session_state["sidebar_segment_mode"] = segment_mode_keys[0]
+        segment_mode = st.selectbox(
+            "Segment Mode",
+            options=segment_mode_keys,
+            key="sidebar_segment_mode",
+            format_func=lambda key: segment_modes.get(key, key),
+            help="Switch between dominant segment, derived customer class, and derived engagement buckets.",
+        )
+        segment_options = segments_by_mode.get(segment_mode, ["All"])
         if st.session_state.get("sidebar_segment") not in segment_options:
             st.session_state["sidebar_segment"] = segment_options[0]
         segment = st.selectbox(
             "Customer Segment",
             options=segment_options,
             key="sidebar_segment",
-            help="Filter the city view by the dominant customer segment in each territory.",
+            help="Filter the city view using the currently selected segment mode.",
         )
 
     return {
         "city": city,
         "metric_key": metric_key,
         "territory": territory,
+        "segment_mode": segment_mode,
         "segment": segment,
     }
 

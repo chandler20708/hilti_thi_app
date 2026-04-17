@@ -37,14 +37,24 @@ def render_page() -> None:
         city_scope = base.loc[base["Sprawl"] == city]
         territories_by_city[city] = ["All territories"] + sorted(city_scope["PostDist"].dropna().unique().tolist())
 
-    controls = render_sidebar_controls(city_options, options["segments"], territories_by_city, default_city)
+    controls = render_sidebar_controls(
+        city_options,
+        options["segment_modes"],
+        options["segments_by_mode"],
+        territories_by_city,
+        default_city,
+    )
     st.session_state["executive_city"] = controls["city"]
     api_base_url = resolve_api_base_url()
 
     thi_controls = render_thi_controls(expanded=False)
     scored = score_thi(base, thi_controls["weights"], thi_controls["active_keys"])
 
-    analysis_filters = build_analysis_filters(controls["city"], controls["segment"])
+    analysis_filters = build_analysis_filters(
+        controls["city"],
+        controls["segment"],
+        segment_mode=controls["segment_mode"],
+    )
 
     scope_frame = apply_filters(scored, analysis_filters)
     if scope_frame.empty:
@@ -83,6 +93,7 @@ def render_page() -> None:
         controls["city"],
         controls["segment"],
         district=selected_territory or "All",
+        segment_mode=controls["segment_mode"],
     )
     focus = get_focus_record(base, focus_filters)
 

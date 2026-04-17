@@ -29,7 +29,7 @@ app = FastAPI(title="Hilti Territory Map API")
 _DISTRICTS_CACHE = BytesTTLCache(
     max_entries=env_int("HILTI_DISTRICTS_CACHE_MAX_ENTRIES", 18),
     ttl_seconds=env_float("HILTI_DISTRICTS_CACHE_TTL_SECONDS", 90.0),
-    max_entry_bytes=env_int("HILTI_DISTRICTS_CACHE_MAX_ENTRY_BYTES", 1_100_000),
+    max_entry_bytes=env_int("HILTI_DISTRICTS_CACHE_MAX_ENTRY_BYTES", 1_500_000),
 )
 
 
@@ -80,6 +80,7 @@ async def districts(
     sprawl: Annotated[str, Query()] = "All",
     district: Annotated[str, Query()] = "All",
     segment: Annotated[str, Query()] = "All",
+    segment_mode: Annotated[str, Query()] = "primary_segment",
     active: Annotated[str, Query()] = "",
     w_mps: Annotated[float | None, Query()] = None,
     w_cas: Annotated[float | None, Query()] = None,
@@ -96,6 +97,7 @@ async def districts(
             "sprawl": sprawl,
             "district": district,
             "segment": segment,
+            "segment_mode": segment_mode,
             "active": active,
         },
     )
@@ -123,6 +125,7 @@ async def districts(
         sprawl,
         district,
         segment,
+        segment_mode,
         active,
         w_mps,
         w_cas,
@@ -148,6 +151,7 @@ def _build_districts_body(
     sprawl: str,
     district: str,
     segment: str,
+    segment_mode: str,
     active: str,
     w_mps: float | None,
     w_cas: float | None,
@@ -167,6 +171,7 @@ def _build_districts_body(
         "sprawl": sprawl,
         "district": district,
         "segment": segment,
+        "segment_mode": segment_mode,
     }
     filtered = get_filtered_geo_dataframe(scored, filters, weights, active_keys, profile=profile)
     viewport = _apply_bbox(filtered, west, south, east, north, zoom, profile=profile)

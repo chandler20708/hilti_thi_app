@@ -114,6 +114,7 @@ async def district_vector_tile(
     sprawl: Annotated[str, Query()] = "All",
     district: Annotated[str, Query()] = "All",
     segment: Annotated[str, Query()] = "All",
+    segment_mode: Annotated[str, Query()] = "primary_segment",
     active: Annotated[str, Query()] = "",
     w_mps: Annotated[float | None, Query()] = None,
     w_cas: Annotated[float | None, Query()] = None,
@@ -131,6 +132,7 @@ async def district_vector_tile(
             "sprawl": sprawl,
             "district": district,
             "segment": segment,
+            "segment_mode": segment_mode,
             "active": active,
         },
     )
@@ -149,7 +151,7 @@ async def district_vector_tile(
         active_keys = _parse_active_keys(active)
         stage.update_meta(weights=weights, active_key_count=len(active_keys))
     cache_key = (
-        f"{z}:{x}:{y}:{post_area}:{sprawl}:{district}:{segment}:{active}:"
+        f"{z}:{x}:{y}:{post_area}:{sprawl}:{district}:{segment}:{segment_mode}:{active}:"
         f"{weights['mps']:.4f}:{weights['cas']:.4f}:{weights['cps']:.4f}:{weights['gii']:.4f}:{weights['pis']:.4f}"
     )
     with profile.stage("mvt_cache_lookup") as stage:
@@ -174,6 +176,7 @@ async def district_vector_tile(
         sprawl,
         district,
         segment,
+        segment_mode,
         active_keys,
         weights,
         profile,
@@ -196,6 +199,7 @@ def _build_tile_body(
     sprawl: str,
     district: str,
     segment: str,
+    segment_mode: str,
     active_keys: list[str],
     weights: dict[str, float],
     profile: RequestProfile | None = None,
@@ -206,7 +210,13 @@ def _build_tile_body(
     with profile.stage("filtering", rows_before=len(scored)) as stage:
         filtered = apply_filters(
             scored,
-            {"post_area": post_area, "sprawl": sprawl, "district": district, "segment": segment},
+            {
+                "post_area": post_area,
+                "sprawl": sprawl,
+                "district": district,
+                "segment": segment,
+                "segment_mode": segment_mode,
+            },
         )
         stage.set_rows_after(len(filtered))
     pad = 0.0012 * (14 - min(z, 14) + 1)

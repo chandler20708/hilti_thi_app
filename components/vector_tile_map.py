@@ -23,6 +23,7 @@ def _tile_query_string(
         ("sprawl", str(f.get("sprawl", "All"))),
         ("district", str(f.get("district", "All"))),
         ("segment", str(f.get("segment", "All"))),
+        ("segment_mode", str(f.get("segment_mode", "primary_segment"))),
         ("active", ",".join(active)),
     ]
     for key, val in w.items():

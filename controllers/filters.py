@@ -3,6 +3,8 @@ from __future__ import annotations
 import geopandas as gpd
 import pandas as pd
 
+from models.district_data import SEGMENT_MODE_COLUMNS
+
 
 def build_filter_mask(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> pd.Series:
     mask = pd.Series(True, index=gdf.index)
@@ -12,8 +14,10 @@ def build_filter_mask(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> pd.S
         mask &= gdf["Sprawl"] == filters["sprawl"]
     if filters.get("district") and filters["district"] != "All":
         mask &= gdf["PostDist"] == filters["district"]
-    if filters.get("segment") and filters["segment"] != "All":
-        mask &= gdf["primary_segment"] == filters["segment"]
+    segment_mode = str(filters.get("segment_mode", "primary_segment"))
+    segment_column = SEGMENT_MODE_COLUMNS.get(segment_mode, "primary_segment")
+    if filters.get("segment") and filters["segment"] != "All" and segment_column in gdf.columns:
+        mask &= gdf[segment_column] == filters["segment"]
     return mask
 
 

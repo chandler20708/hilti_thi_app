@@ -298,6 +298,7 @@ def render_leaflet_metric_map(
           if (state.sprawl && state.sprawl !== "All") params.set("sprawl", state.sprawl);
           if (state.district && state.district !== "All") params.set("district", state.district);
           if (state.segment && state.segment !== "All") params.set("segment", state.segment);
+          if (state.segment_mode && state.segment_mode !== "primary_segment") params.set("segment_mode", state.segment_mode);
 
           if (state.active_keys && state.active_keys.length) {{
             params.set("active", state.active_keys.join(","));
