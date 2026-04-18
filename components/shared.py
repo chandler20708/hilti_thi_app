@@ -11,6 +11,25 @@ import streamlit as st
 from models.scoring import DEFAULT_WEIGHTS, factor_catalog
 
 TRAFFIC_SCALE = ["#ea4335", "#fbbc04", "#34a853"]
+SEGMENT_OPTION_LABELS = {
+    "size_class": {
+        "A": "A Class",
+        "B": "B Class",
+        "C": "C Class",
+        "D": "D Class",
+        "E": "E Class",
+    },
+    "activity_class": {
+        "FTC": "FTC (First Time Customers)",
+        "EFA": "EFA (Engaged, Frequent, Active)",
+        "E": "E (Engaged)",
+        "F": "F (Frequent)",
+        "A": "A (Active)",
+        "P": "P (Passive)",
+        "Non-EFA": "Non-EFA",
+        "Focus": "Focus",
+    },
+}
 
 
 METRIC_CONFIG = {
@@ -232,15 +251,16 @@ def render_sidebar_controls(
             options=segment_mode_keys,
             key="sidebar_segment_mode",
             format_func=lambda key: segment_modes.get(key, key),
-            help="Switch between dominant segment, derived customer class, and derived engagement buckets.",
+            help="Switch between primary segment, brief size class, and brief activity class terminology.",
         )
         segment_options = segments_by_mode.get(segment_mode, ["All"])
         if st.session_state.get("sidebar_segment") not in segment_options:
             st.session_state["sidebar_segment"] = segment_options[0]
         segment = st.selectbox(
-            "Customer Segment",
+            "Segment Filter",
             options=segment_options,
             key="sidebar_segment",
+            format_func=lambda option: SEGMENT_OPTION_LABELS.get(segment_mode, {}).get(option, option),
             help="Filter the city view using the currently selected segment mode.",
         )
 

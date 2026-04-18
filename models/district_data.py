@@ -34,15 +34,25 @@ MAP_PAYLOAD_RENAMES = {
 # polygons built offline so runtime simplify + RAM stay lower).
 GEOM_MAP_LOW = "geom_map_low"
 GEOM_MAP_MID = "geom_map_mid"
+SIZE_CLASS_ORDER = ["A", "B", "C", "D", "E"]
+ACTIVITY_CLASS_ORDER = ["FTC", "EFA", "E", "F", "A", "P", "Non-EFA", "Focus"]
+SEGMENT_MODE_ALIASES = {
+    "primary_segment": "primary_segment",
+    "size_class": "size_class",
+    "activity_class": "activity_class",
+    # Backward-compatible aliases for earlier prototype terminology.
+    "customer_class": "size_class",
+    "engagement_mode": "activity_class",
+}
 SEGMENT_MODE_COLUMNS = {
     "primary_segment": "primary_segment",
-    "customer_class": "customer_class",
-    "engagement_mode": "engagement_mode",
+    "size_class": "size_class",
+    "activity_class": "activity_class",
 }
 SEGMENT_MODE_LABELS = {
     "primary_segment": "Primary Segment",
-    "customer_class": "Customer Class",
-    "engagement_mode": "Engagement Mode",
+    "size_class": "Size Class",
+    "activity_class": "Activity Class",
 }
 
 
@@ -59,37 +69,52 @@ def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
     return result
 
 
-def _customer_class(series: pd.Series) -> pd.Series:
+def resolve_segment_mode(segment_mode: str | None) -> str:
+    if segment_mode is None:
+        return "primary_segment"
+    return SEGMENT_MODE_ALIASES.get(str(segment_mode), "primary_segment")
+
+
+def _size_class(series: pd.Series) -> pd.Series:
     valid = series.dropna()
-    result = pd.Series("Class D", index=series.index, dtype="object")
+    result = pd.Series("E", index=series.index, dtype="object")
     if valid.empty:
         return result
 
     percentile = valid.rank(method="average", pct=True)
-    result.loc[percentile.index] = "Class C"
-    result.loc[percentile[percentile >= 0.50].index] = "Class B"
-    result.loc[percentile[percentile >= 0.75].index] = "Class A"
+    result.loc[percentile[percentile >= 0.20].index] = "D"
+    result.loc[percentile[percentile >= 0.40].index] = "C"
+    result.loc[percentile[percentile >= 0.60].index] = "B"
+    result.loc[percentile[percentile >= 0.80].index] = "A"
     return result
 
 
-def _engagement_mode(
+def _activity_class(
     existing_accounts: pd.Series,
     lead_volume: pd.Series,
     loyalty_strength: pd.Series,
+    market_opportunity_score: pd.Series,
 ) -> pd.Series:
     existing = existing_accounts.fillna(0.0)
     leads = lead_volume.fillna(0.0)
     loyalty = loyalty_strength.fillna(0.0)
+    opportunity = market_opportunity_score.fillna(0.0)
     total = (existing + leads).replace(0, 1.0)
     lead_share = leads / total
     existing_pct = existing.rank(method="average", pct=True)
     lead_pct = leads.rank(method="average", pct=True)
     loyalty_pct = loyalty.rank(method="average", pct=True)
+    opportunity_pct = opportunity.rank(method="average", pct=True)
+    activity_score = 0.45 * existing_pct + 0.35 * loyalty_pct + 0.20 * lead_pct
 
-    result = pd.Series("Developing", index=existing_accounts.index, dtype="object")
-    result.loc[(lead_share >= 0.52) & (lead_pct >= 0.50)] = "FTC"
-    result.loc[(existing_pct >= 0.62) & (loyalty_pct >= 0.45) & (lead_share < 0.42)] = "Engaged"
-    result.loc[(existing_pct >= 0.42) & (lead_pct >= 0.42)] = "Mixed"
+    result = pd.Series("Non-EFA", index=existing_accounts.index, dtype="object")
+    result.loc[(lead_share >= 0.54) & (lead_pct >= 0.52) & (existing_pct < 0.58)] = "FTC"
+    result.loc[(activity_score < 0.22) | ((existing_pct < 0.24) & (lead_pct < 0.24))] = "P"
+    result.loc[(loyalty_pct >= 0.78) & (existing_pct >= 0.72) & (activity_score >= 0.72)] = "EFA"
+    result.loc[(loyalty_pct >= 0.68) & (result == "Non-EFA")] = "E"
+    result.loc[(existing_pct >= 0.62) & (result == "Non-EFA")] = "F"
+    result.loc[(activity_score >= 0.45) & (result == "Non-EFA")] = "A"
+    result.loc[(opportunity_pct >= 0.86) & (activity_score >= 0.38) & (result != "FTC")] = "Focus"
     return result
 
 
@@ -139,11 +164,12 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
 
     synthetic_rows = merged.apply(build_synthetic_metrics, axis=1, result_type="expand")
     merged = pd.concat([merged, synthetic_rows], axis=1)
-    merged["customer_class"] = _customer_class(merged["market_opportunity_score"])
-    merged["engagement_mode"] = _engagement_mode(
+    merged["size_class"] = _size_class(merged["market_opportunity_score"])
+    merged["activity_class"] = _activity_class(
         merged["existing_accounts"],
         merged["lead_volume"],
         merged["loyalty_strength"],
+        merged["market_opportunity_score"],
     )
 
     merged["retention_health"] = 100.0 - merged["retention_risk"]
@@ -159,15 +185,17 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
 
 
 def get_filter_options(gdf: gpd.GeoDataFrame) -> dict[str, list[str]]:
+    size_labels = set(gdf["size_class"].dropna().unique()) if "size_class" in gdf.columns else set()
+    activity_labels = set(gdf["activity_class"].dropna().unique()) if "activity_class" in gdf.columns else set()
     return {
         "districts": ["All"] + sorted(gdf["PostDist"].dropna().unique().tolist()),
         "sprawls": ["All"] + sorted(gdf["Sprawl"].dropna().unique().tolist()),
         "segments": ["All"] + sorted(gdf["primary_segment"].dropna().unique().tolist()),
         "segment_modes": SEGMENT_MODE_LABELS,
         "segments_by_mode": {
-            mode: ["All"] + sorted(gdf[column].dropna().unique().tolist())
-            for mode, column in SEGMENT_MODE_COLUMNS.items()
-            if column in gdf.columns
+            "primary_segment": ["All"] + sorted(gdf["primary_segment"].dropna().unique().tolist()),
+            "size_class": ["All"] + [label for label in SIZE_CLASS_ORDER if label in size_labels],
+            "activity_class": ["All"] + [label for label in ACTIVITY_CLASS_ORDER if label in activity_labels],
         },
     }
 
