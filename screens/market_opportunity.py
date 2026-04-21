@@ -30,7 +30,7 @@ def render_page() -> None:
 
     render_app_frame()
     city_options = options["sprawls"]
-    default_city = "Manchester" if "Manchester" in city_options else city_options[0]
+    default_city = "All" if "All" in city_options else city_options[0]
 
     territories_by_city = {"All": ["All territories"] + sorted(base["PostDist"].dropna().unique().tolist())}
     for city in [value for value in city_options if value != "All"]:
