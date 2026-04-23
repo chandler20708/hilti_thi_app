@@ -137,7 +137,10 @@ def customer_segment_metric(segment_label: str) -> tuple[str, str]:
     return "construction_customer_proxy_local_units_total", "Total construction local units"
 
 
-def build_overview_external_context(hilti_store_names: tuple[str, ...] = ()) -> dict[str, Any]:
+def build_overview_external_context(
+    hilti_store_names: tuple[str, ...] = (),
+    local_authority_name: str | None = None,
+) -> dict[str, Any]:
     stores = load_competitor_store_locations()
     demand = load_market_demand_frame()
 
@@ -180,19 +183,27 @@ def build_overview_external_context(hilti_store_names: tuple[str, ...] = ()) -> 
             "closest_km": float(row["closest_competitor_km"]),
         }
 
-    top_demand = demand.sort_values(
-        "construction_customer_proxy_local_units_total",
-        ascending=False,
-    ).iloc[0]
+    demand_options = sorted(demand["area_name"].dropna().astype(str).unique().tolist())
+    selected_name = local_authority_name if local_authority_name in demand_options else None
+    if selected_name:
+        selected_demand = demand.loc[demand["area_name"] == selected_name].iloc[0]
+    else:
+        selected_demand = demand.sort_values(
+            "construction_customer_proxy_local_units_total",
+            ascending=False,
+        ).iloc[0]
+        selected_name = str(selected_demand["area_name"])
+
     demand_summary = {
-        "area": str(top_demand["area_name"]),
-        "construction_units": int(top_demand["construction_customer_proxy_local_units_total"]),
-        "units_per_10k_people": float(top_demand["construction_units_per_10k_people"]),
-        "population": int(top_demand["population_mid_2024"]),
+        "area": selected_name,
+        "construction_units": int(selected_demand["construction_customer_proxy_local_units_total"]),
+        "units_per_10k_people": float(selected_demand["construction_units_per_10k_people"]),
+        "population": int(selected_demand["population_mid_2024"]),
     }
 
     return {
         "pressure_summary": pressure_summary,
         "pressure_by_store": pressure_by_store,
         "demand_summary": demand_summary,
+        "demand_options": demand_options,
     }

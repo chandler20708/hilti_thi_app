@@ -6,7 +6,7 @@ import streamlit as st
 
 from controllers.filters import apply_filters, get_focus_record
 from models.district_data import build_map_frame, get_filter_options, load_prototype_geo_dataframe
-from models.external_market import build_overview_external_context
+from models.external_market import build_overview_external_context, load_market_demand_frame
 from models.scoring import score_thi
 from models.store_locations import load_hilti_store_locations
 from components.map_component import render_leaflet_metric_map
@@ -26,7 +26,22 @@ from components.shared import (
 
 def _render_external_context_panel(visible_stores) -> None:
     store_names = tuple(visible_stores["name"].dropna().astype(str).tolist())
-    context = build_overview_external_context(store_names)
+    demand_frame = load_market_demand_frame()
+    local_authority_options = sorted(demand_frame["area_name"].dropna().astype(str).unique().tolist())
+    default_local_authority = "Birmingham" if "Birmingham" in local_authority_options else local_authority_options[0]
+    stored_local_authority = st.session_state.get("overview_external_local_authority", default_local_authority)
+    if stored_local_authority not in local_authority_options:
+        stored_local_authority = default_local_authority
+
+    selected_local_authority = st.selectbox(
+        "Construction demand local authority",
+        options=local_authority_options,
+        index=local_authority_options.index(stored_local_authority),
+        key="overview_external_local_authority",
+        help="Public demand data is aligned to local authority boundaries, not the overview city/sprawl geography.",
+    )
+
+    context = build_overview_external_context(store_names, selected_local_authority)
     pressure = context["pressure_summary"]
     demand = context["demand_summary"]
     pressure_table = context["pressure_by_store"].head(5).copy()
@@ -43,7 +58,7 @@ def _render_external_context_panel(visible_stores) -> None:
           <div>
             <div class="external-kicker">Construction demand</div>
             <strong>{demand["construction_units"]:,} local construction units</strong>
-            <span>Highest public-demand proxy is {demand["area"]} ({demand["units_per_10k_people"]:.1f} units per 10k people).</span>
+            <span>{demand["area"]} has {demand["units_per_10k_people"]:.1f} units per 10k people across a population of {demand["population"]:,}.</span>
           </div>
         </div>
         """,
@@ -51,7 +66,9 @@ def _render_external_context_panel(visible_stores) -> None:
     )
 
     with st.expander("External signal detail", expanded=False):
-        st.caption("These are compact context signals from the External Market Intelligence datasets. They are not used to recalculate the THI score yet.")
+        st.caption(
+            "External pressure follows the visible Hilti store scope. Construction demand is selected separately at local authority level because the public datasets are published on that geography. These signals do not recalculate the THI score yet."
+        )
         if pressure_table.empty:
             st.info("No mapped competitor branches within 10 km for the current Hilti store scope.")
         else:
