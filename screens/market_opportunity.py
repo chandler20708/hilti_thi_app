@@ -57,8 +57,6 @@ def render_page() -> None:
     )
 
     scope_frame = apply_filters(scored, analysis_filters)
-    if scope_frame.empty:
-        scope_frame = scored
     geojson_data = None
     if not api_base_url:
         map_frame = build_map_frame(scope_frame, controls["city"])
@@ -72,18 +70,22 @@ def render_page() -> None:
     metric_meta = METRIC_CONFIG[metric_key]
     top_priority = scope_frame.sort_values(metric_key, ascending=False).head(1)
     top_territory = top_priority.iloc[0]["PostDist"] if not top_priority.empty else "N/A"
+    avg_opportunity = float(scope_frame["thi_score"].mean()) if not scope_frame.empty else 0.0
     avg_growth = float(scope_frame["market_opportunity_score"].mean()) if not scope_frame.empty else 0.0
     avg_retention = float(scope_frame["retention_health"].mean()) if not scope_frame.empty else 0.0
+    segment_label = controls["segment"] if controls["segment"] != "All" else controls["segment_mode"].replace("_", " ").title()
 
     render_metric_cards(
         [
-            ("City in focus", controls["city"], "Primary executive review area"),
-            ("Average growth opportunity", f"{avg_growth:.1f}", "Current city-wide territory average on acquisition"),
-            ("Average retention health", f"{avg_retention:.1f}", "Current city-wide territory average on retention"),
-            ("Top priority territory", top_territory, f"Highest {metric_meta['short_label'].lower()} signal in scope"),
+            ("Geography in scope", controls["city"], "Resource deployment geography"),
+            ("Segment slice", segment_label, "Current customer segment filter"),
+            ("Average opportunity score", f"{avg_opportunity:.1f}", "THI average inside the selected segment"),
+            ("Top deployment candidate", top_territory, f"Highest {metric_meta['short_label'].lower()} signal in scope"),
         ],
         scope_frame=scope_frame
     )
+    if scope_frame.empty:
+        st.warning("No territories match the current geography and segment slice. Broaden the segment filter or switch city scope.")
     st.markdown('<div style="height:0.4rem;"></div>', unsafe_allow_html=True)
 
     searched_territory = controls["territory"] if controls["territory"] != "All territories" else None
@@ -97,7 +99,13 @@ def render_page() -> None:
     )
     focus = get_focus_record(base, focus_filters)
 
-    geography_signature = (controls["city"], selected_territory or "All", metric_key)
+    geography_signature = (
+        controls["city"],
+        controls["segment_mode"],
+        controls["segment"],
+        selected_territory or "All",
+        metric_key,
+    )
     previous_signature = st.session_state.get("market_geo_signature")
     should_refocus = previous_signature != geography_signature
     st.session_state["market_geo_signature"] = geography_signature
@@ -112,6 +120,11 @@ def render_page() -> None:
                 else ""
             )
             st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.{overview_note}")
+            if controls["segment"] != "All":
+                st.caption(
+                    f"Cross-filter active: showing {metric_meta['label'].lower()} only for "
+                    f"{controls['segment']} within {controls['city']}."
+                )
             map_data_source_caption(api_base_url)
             render_leaflet_metric_map(
                 geojson_data=geojson_data,
@@ -143,5 +156,5 @@ def render_page() -> None:
                 st.info("Use the sidebar territory search to focus the map on a specific territory and open its executive summary.")
 
         with st.container(border=True):
-            st.subheader(f"Top 5 {metric_meta['label']} Territories")
-            render_top_territories_snapshot(scope_frame, metric_key)
+            st.subheader(f"Top 5 Deployment Candidates")
+            render_top_territories_snapshot(scope_frame, metric_key, controls["segment_mode"])

@@ -33,6 +33,11 @@ SEGMENT_OPTION_LABELS = {
 
 
 METRIC_CONFIG = {
+    "thi_score": {
+        "label": "Strategy Opportunity",
+        "short_label": "THI",
+        "description": "Rank territories using the current THI factor strategy inside the selected segment.",
+    },
     "market_opportunity_score": {
         "label": "Growth Opportunity",
         "short_label": "Growth",
@@ -220,7 +225,7 @@ def render_sidebar_controls(
         if st.session_state.get("sidebar_city") not in city_options:
             st.session_state["sidebar_city"] = default_city_value
         if st.session_state.get("sidebar_metric_key") not in METRIC_CONFIG:
-            st.session_state["sidebar_metric_key"] = "market_opportunity_score"
+            st.session_state["sidebar_metric_key"] = "thi_score"
         city = st.selectbox(
             "City",
             options=city_options,
@@ -228,11 +233,11 @@ def render_sidebar_controls(
             help="Start with the city or market area you want to review.",
         )
         metric_key = st.radio(
-            "Map View",
+            "Opportunity Signal",
             options=list(METRIC_CONFIG.keys()),
             format_func=lambda key: METRIC_CONFIG[key]["label"],
             key="sidebar_metric_key",
-            help="Switch the map between new-growth priority and retention pressure.",
+            help="Choose the score used to color the filtered map and rank deployment candidates.",
         )
         territory_options = territories_by_city.get(city, ["All territories"])
         if st.session_state.get("sidebar_territory") not in territory_options:
@@ -365,7 +370,11 @@ def render_metric_cards(metric_payload, scope_frame=None) -> None:
 
             # --- Mini distribution for growth ---
             if scope_frame is not None:
-                if label == "Average growth opportunity":
+                if label == "Average opportunity score":
+                    values = scope_frame["thi_score"].dropna()
+                    _render_mini_distribution(values)
+
+                elif label == "Average growth opportunity":
                     values = scope_frame["market_opportunity_score"].dropna()
                     _render_mini_distribution(values)
 
@@ -373,15 +382,23 @@ def render_metric_cards(metric_payload, scope_frame=None) -> None:
                     values = scope_frame["retention_health"].dropna()
                     _render_mini_distribution(values)
 
-def render_top_territories_snapshot(df, metric_key: str) -> None:
+def render_top_territories_snapshot(df, metric_key: str, segment_mode: str = "primary_segment") -> None:
     ranking = df.sort_values(metric_key, ascending=False).head(5).copy()
     if ranking.empty:
+        st.info("No deployment candidates match the current cross-filter.")
         return
 
-    summary_rows = ranking.loc[:, ["PostDist", metric_key, "primary_segment"]].copy()
-    summary_rows.columns = ["Territory", METRIC_CONFIG[metric_key]["short_label"], "Sales Emphasis"]
+    segment_column = segment_mode if segment_mode in {"size_class", "activity_class"} else "primary_segment"
+    columns = ["PostDist", metric_key, "primary_segment"]
+    if segment_column not in columns and segment_column in ranking.columns:
+        columns.append(segment_column)
+    summary_rows = ranking.loc[:, columns].copy()
+    output_columns = ["Territory", METRIC_CONFIG[metric_key]["short_label"], "Primary Segment"]
+    if segment_column not in {"primary_segment"} and segment_column in ranking.columns:
+        output_columns.append("Selected Segment")
+    summary_rows.columns = output_columns
     summary_rows[METRIC_CONFIG[metric_key]["short_label"]] = summary_rows[METRIC_CONFIG[metric_key]["short_label"]].map(lambda value: f"{value:.1f}")
-    st.caption("Reference only. Use the map to browse the full city footprint.")
+    st.caption("Ranked inside the current geography, segment filter, and THI strategy.")
     st.dataframe(summary_rows, width="stretch", hide_index=True)
 
 
@@ -440,10 +457,12 @@ def render_territory_detail(row, city_df) -> None:
           <div class="detail-kicker">Selected Territory</div>
           <h3>{row["PostDist"]}</h3>
           <div class="detail-grid">
+            <div><span>Strategy Opportunity</span><strong>{row["thi_score"]:.1f}</strong></div>
             <div><span>Growth Opportunity</span><strong>{row["market_opportunity_score"]:.1f}</strong></div>
             <div><span>Retention Health</span><strong>{row["retention_health"]:.1f}</strong></div>
             <div><span>Competition Pressure</span><strong>{row["competition_pressure"]:.1f}</strong></div>
             <div><span>Primary Sales Emphasis</span><strong>{row["primary_segment"]}</strong></div>
+            <div><span>Size / Activity</span><strong>{row.get("size_class", "N/A")} / {row.get("activity_class", "N/A")}</strong></div>
           </div>
         </div>
         """,

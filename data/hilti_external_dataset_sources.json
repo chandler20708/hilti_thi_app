@@ -1,0 +1,88 @@
+{
+  "retrieved_utc": "2026-04-23",
+  "files_created": [
+    "hilti_uk_stores_reference.csv",
+    "hilti_competitors_master.csv",
+    "hilti_competitor_store_locations_osm.csv",
+    "hilti_competitor_store_locations_osm.geojson",
+    "uk_population_local_authority_mid2024.csv",
+    "uk_population_time_series_current.csv",
+    "hilti_customer_segments_research.csv",
+    "hilti_customer_proxy_construction_local_units_2025.csv",
+    "hilti_customer_proxy_summary_by_local_authority_2025.csv"
+  ],
+  "sources": {
+    "hilti_stores": "https://www.hilti.co.uk/stores",
+    "osm_overpass": "https://overpass-api.de/",
+    "ons_population_local_authority": "https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatesforukenglandandwalesscotlandandnorthernireland",
+    "ons_population_timeseries": "https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/populationestimates/datasets/populationestimatestimeseriesdataset/current",
+    "nomis_business_counts": "https://www.nomisweb.co.uk/datasets/idbrlu"
+  },
+  "overpass_errors": [
+    {
+      "competitor": "Selco Builders Warehouse",
+      "error": "<HTTPError 429: 'Too Many Requests'>"
+    },
+    {
+      "competitor": "Wolseley",
+      "error": "<HTTPError 429: 'Too Many Requests'>"
+    },
+    {
+      "competitor": "City Plumbing",
+      "error": "<HTTPError 429: 'Too Many Requests'>"
+    },
+    {
+      "competitor": "Huws Gray",
+      "error": "<HTTPError 429: 'Too Many Requests'>"
+    },
+    {
+      "competitor": "YESSS Electrical",
+      "error": "<HTTPError 429: 'Too Many Requests'>"
+    },
+    {
+      "competitor": "Edmundson Electrical",
+      "error": "<HTTPError 504: 'Gateway Timeout'>"
+    },
+    {
+      "competitor": "B&Q TradePoint",
+      "error": "<HTTPError 429: 'Too Many Requests'>"
+    }
+  ],
+  "row_counts": {
+    "competitor_store_locations_osm": 2799,
+    "population_local_authority_mid2024": 361,
+    "customer_proxy_construction_rows": 1083,
+    "customer_proxy_summary_areas": 361,
+    "population_time_series_current": 55
+  },
+  "overpass_exact_selector_counts": {
+    "Screwfix": 672,
+    "Toolstation": 360,
+    "Travis Perkins": 380,
+    "Jewson": 308,
+    "Howdens": 349,
+    "CEF": 148,
+    "MKM Building Supplies": 57,
+    "Buildbase": 36
+  },
+  "competitor_store_location_method": "OpenStreetMap Overpass exact brand/name selector query within UK bounding box; use as public coverage layer, not official full estate list.",
+  "overpass_retry_errors": [
+    {
+      "competitor": "City Plumbing",
+      "error": "<HTTPError 504: 'Gateway Timeout'>"
+    }
+  ],
+  "overpass_retry_counts": {
+    "Selco Builders Warehouse": 52,
+    "Wolseley": 194,
+    "Huws Gray": 66,
+    "YESSS Electrical": 2,
+    "Edmundson Electrical": 57,
+    "B&Q TradePoint": 11
+  },
+  "overpass_city_plumbing_errors": [],
+  "overpass_city_plumbing_counts": {
+    "City Plumbing": 87,
+    "City Plumbing Supplies": 20
+  }
+}

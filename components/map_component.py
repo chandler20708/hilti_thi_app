@@ -191,7 +191,11 @@ def render_leaflet_metric_map(
         const recenterBtn = document.getElementById("recenterBtn");
         const responseCache = new Map();
         const responseCacheMaxEntries = 12;
-        const storageKey = "hilti_market_map_state_" + state.metric_key;
+        const storageKey = "hilti_market_map_state_" + [
+          state.metric_key,
+          state.segment_mode || "primary_segment",
+          state.segment || "All"
+        ].join("_");
         const defaultBounds = [[49.8, -8.2], [60.9, 2.2]];
         const segmentModeLabels = {{
           primary_segment: "Primary Segment",
@@ -238,6 +242,7 @@ def render_leaflet_metric_map(
         }};
 
         function activeCategoryKey() {{
+          if (state.segment && state.segment !== "All") return null;
           return categoryPalettes[state.segment_mode] ? state.segment_mode : null;
         }}
 

@@ -1,0 +1,362 @@
+area_code,area_name,geography_type,construction_buildings_local_units,civil_engineering_local_units,specialised_construction_local_units,construction_customer_proxy_local_units_total
+E06000001,Hartlepool,local authorities: district / unitary (as of April 2023),85,40,265,390
+E06000002,Middlesbrough,local authorities: district / unitary (as of April 2023),130,55,385,570
+E06000003,Redcar and Cleveland,local authorities: district / unitary (as of April 2023),115,40,360,515
+E06000004,Stockton-on-Tees,local authorities: district / unitary (as of April 2023),215,90,615,920
+E06000005,Darlington,local authorities: district / unitary (as of April 2023),105,40,335,480
+E06000006,Halton,local authorities: district / unitary (as of April 2023),125,40,355,520
+E06000007,Warrington,local authorities: district / unitary (as of April 2023),385,75,660,1120
+E06000008,Blackburn with Darwen,local authorities: district / unitary (as of April 2023),155,30,365,550
+E06000009,Blackpool,local authorities: district / unitary (as of April 2023),115,20,410,545
+E06000010,"Kingston upon Hull, City of",local authorities: district / unitary (as of April 2023),300,60,730,1090
+E06000011,East Riding of Yorkshire,local authorities: district / unitary (as of April 2023),605,130,1340,2075
+E06000012,North East Lincolnshire,local authorities: district / unitary (as of April 2023),180,45,565,790
+E06000013,North Lincolnshire,local authorities: district / unitary (as of April 2023),195,85,570,850
+E06000014,York,local authorities: district / unitary (as of April 2023),310,60,605,975
+E06000015,Derby,local authorities: district / unitary (as of April 2023),310,80,615,1005
+E06000016,Leicester,local authorities: district / unitary (as of April 2023),395,40,640,1075
+E06000017,Rutland,local authorities: district / unitary (as of April 2023),70,10,140,220
+E06000018,Nottingham,local authorities: district / unitary (as of April 2023),390,60,595,1045
+E06000019,"Herefordshire, County of",local authorities: district / unitary (as of April 2023),420,115,810,1345
+E06000020,Telford and Wrekin,local authorities: district / unitary (as of April 2023),230,50,515,795
+E06000021,Stoke-on-Trent,local authorities: district / unitary (as of April 2023),265,50,640,955
+E06000022,Bath and North East Somerset,local authorities: district / unitary (as of April 2023),405,60,730,1195
+E06000023,"Bristol, City of",local authorities: district / unitary (as of April 2023),720,105,1445,2270
+E06000024,North Somerset,local authorities: district / unitary (as of April 2023),365,80,910,1355
+E06000025,South Gloucestershire,local authorities: district / unitary (as of April 2023),580,90,1490,2160
+E06000026,Plymouth,local authorities: district / unitary (as of April 2023),325,40,880,1245
+E06000027,Torbay,local authorities: district / unitary (as of April 2023),215,40,495,750
+E06000030,Swindon,local authorities: district / unitary (as of April 2023),370,90,775,1235
+E06000031,Peterborough,local authorities: district / unitary (as of April 2023),310,65,625,1000
+E06000032,Luton,local authorities: district / unitary (as of April 2023),525,125,800,1450
+E06000033,Southend-on-Sea,local authorities: district / unitary (as of April 2023),335,50,785,1170
+E06000034,Thurrock,local authorities: district / unitary (as of April 2023),530,85,1215,1830
+E06000035,Medway,local authorities: district / unitary (as of April 2023),500,160,1605,2265
+E06000036,Bracknell Forest,local authorities: district / unitary (as of April 2023),240,40,575,855
+E06000037,West Berkshire,local authorities: district / unitary (as of April 2023),370,75,755,1200
+E06000038,Reading,local authorities: district / unitary (as of April 2023),255,40,430,725
+E06000039,Slough,local authorities: district / unitary (as of April 2023),415,50,485,950
+E06000040,Windsor and Maidenhead,local authorities: district / unitary (as of April 2023),350,55,540,945
+E06000041,Wokingham,local authorities: district / unitary (as of April 2023),350,55,700,1105
+E06000042,Milton Keynes,local authorities: district / unitary (as of April 2023),450,70,965,1485
+E06000043,Brighton and Hove,local authorities: district / unitary (as of April 2023),545,50,975,1570
+E06000044,Portsmouth,local authorities: district / unitary (as of April 2023),325,90,905,1320
+E06000045,Southampton,local authorities: district / unitary (as of April 2023),300,70,780,1150
+E06000046,Isle of Wight,local authorities: district / unitary (as of April 2023),250,35,425,710
+E06000047,County Durham,local authorities: district / unitary (as of April 2023),605,280,1555,2440
+E06000049,Cheshire East,local authorities: district / unitary (as of April 2023),855,155,1225,2235
+E06000050,Cheshire West and Chester,local authorities: district / unitary (as of April 2023),500,130,955,1585
+E06000051,Shropshire,local authorities: district / unitary (as of April 2023),655,145,1275,2075
+E06000052,Cornwall,local authorities: district / unitary (as of April 2023),1465,260,2405,4130
+E06000053,Isles of Scilly,local authorities: district / unitary (as of April 2023),5,0,10,15
+E06000054,Wiltshire,local authorities: district / unitary (as of April 2023),905,175,1975,3055
+E06000055,Bedford,local authorities: district / unitary (as of April 2023),330,50,785,1165
+E06000056,Central Bedfordshire,local authorities: district / unitary (as of April 2023),765,155,1735,2655
+E06000057,Northumberland,local authorities: district / unitary (as of April 2023),410,100,1010,1520
+E06000058,"Bournemouth, Christchurch and Poole",local authorities: district / unitary (as of April 2023),985,120,1785,2890
+E06000059,Dorset,local authorities: district / unitary (as of April 2023),865,160,1880,2905
+E06000060,Buckinghamshire,local authorities: district / unitary (as of April 2023),1515,220,2705,4440
+E06000061,North Northamptonshire,local authorities: district / unitary (as of April 2023),635,125,1400,2160
+E06000062,West Northamptonshire,local authorities: district / unitary (as of April 2023),1060,205,1845,3110
+E06000063,Cumberland,local authorities: district / unitary (as of April 2023),400,125,965,1490
+E06000064,Westmorland and Furness,local authorities: district / unitary (as of April 2023),440,110,1010,1560
+E06000065,North Yorkshire,local authorities: district / unitary (as of April 2023),1315,275,2425,4015
+E06000066,Somerset,local authorities: district / unitary (as of April 2023),1130,270,2335,3735
+E07000008,Cambridge,local authorities: district / unitary (as of April 2023),165,20,185,370
+E07000009,East Cambridgeshire,local authorities: district / unitary (as of April 2023),240,45,475,760
+E07000010,Fenland,local authorities: district / unitary (as of April 2023),215,60,455,730
+E07000011,Huntingdonshire,local authorities: district / unitary (as of April 2023),375,60,830,1265
+E07000012,South Cambridgeshire,local authorities: district / unitary (as of April 2023),400,65,670,1135
+E07000032,Amber Valley,local authorities: district / unitary (as of April 2023),225,50,550,825
+E07000033,Bolsover,local authorities: district / unitary (as of April 2023),110,40,220,370
+E07000034,Chesterfield,local authorities: district / unitary (as of April 2023),135,35,315,485
+E07000035,Derbyshire Dales,local authorities: district / unitary (as of April 2023),210,45,260,515
+E07000036,Erewash,local authorities: district / unitary (as of April 2023),195,45,450,690
+E07000037,High Peak,local authorities: district / unitary (as of April 2023),115,25,345,485
+E07000038,North East Derbyshire,local authorities: district / unitary (as of April 2023),205,50,415,670
+E07000039,South Derbyshire,local authorities: district / unitary (as of April 2023),165,45,390,600
+E07000040,East Devon,local authorities: district / unitary (as of April 2023),400,55,645,1100
+E07000041,Exeter,local authorities: district / unitary (as of April 2023),225,60,425,710
+E07000042,Mid Devon,local authorities: district / unitary (as of April 2023),180,45,410,635
+E07000043,North Devon,local authorities: district / unitary (as of April 2023),250,50,410,710
+E07000044,South Hams,local authorities: district / unitary (as of April 2023),255,45,430,730
+E07000045,Teignbridge,local authorities: district / unitary (as of April 2023),280,80,600,960
+E07000046,Torridge,local authorities: district / unitary (as of April 2023),190,40,295,525
+E07000047,West Devon,local authorities: district / unitary (as of April 2023),120,35,205,360
+E07000061,Eastbourne,local authorities: district / unitary (as of April 2023),105,25,345,475
+E07000062,Hastings,local authorities: district / unitary (as of April 2023),125,25,360,510
+E07000063,Lewes,local authorities: district / unitary (as of April 2023),210,25,480,715
+E07000064,Rother,local authorities: district / unitary (as of April 2023),225,50,460,735
+E07000065,Wealden,local authorities: district / unitary (as of April 2023),490,90,1040,1620
+E07000066,Basildon,local authorities: district / unitary (as of April 2023),485,100,1395,1980
+E07000067,Braintree,local authorities: district / unitary (as of April 2023),350,80,955,1385
+E07000068,Brentwood,local authorities: district / unitary (as of April 2023),310,55,540,905
+E07000069,Castle Point,local authorities: district / unitary (as of April 2023),210,60,695,965
+E07000070,Chelmsford,local authorities: district / unitary (as of April 2023),415,85,1060,1560
+E07000071,Colchester,local authorities: district / unitary (as of April 2023),390,80,880,1350
+E07000072,Epping Forest,local authorities: district / unitary (as of April 2023),705,70,1175,1950
+E07000073,Harlow,local authorities: district / unitary (as of April 2023),195,30,555,780
+E07000074,Maldon,local authorities: district / unitary (as of April 2023),175,50,570,795
+E07000075,Rochford,local authorities: district / unitary (as of April 2023),225,30,645,900
+E07000076,Tendring,local authorities: district / unitary (as of April 2023),280,80,720,1080
+E07000077,Uttlesford,local authorities: district / unitary (as of April 2023),355,40,615,1010
+E07000078,Cheltenham,local authorities: district / unitary (as of April 2023),250,40,380,670
+E07000079,Cotswold,local authorities: district / unitary (as of April 2023),230,40,355,625
+E07000080,Forest of Dean,local authorities: district / unitary (as of April 2023),185,40,370,595
+E07000081,Gloucester,local authorities: district / unitary (as of April 2023),175,40,460,675
+E07000082,Stroud,local authorities: district / unitary (as of April 2023),280,50,500,830
+E07000083,Tewkesbury,local authorities: district / unitary (as of April 2023),235,40,420,695
+E07000084,Basingstoke and Deane,local authorities: district / unitary (as of April 2023),345,65,745,1155
+E07000085,East Hampshire,local authorities: district / unitary (as of April 2023),295,55,605,955
+E07000086,Eastleigh,local authorities: district / unitary (as of April 2023),240,45,775,1060
+E07000087,Fareham,local authorities: district / unitary (as of April 2023),220,50,565,835
+E07000088,Gosport,local authorities: district / unitary (as of April 2023),90,35,265,390
+E07000089,Hart,local authorities: district / unitary (as of April 2023),195,40,480,715
+E07000090,Havant,local authorities: district / unitary (as of April 2023),260,85,835,1180
+E07000091,New Forest,local authorities: district / unitary (as of April 2023),385,65,815,1265
+E07000092,Rushmoor,local authorities: district / unitary (as of April 2023),165,25,430,620
+E07000093,Test Valley,local authorities: district / unitary (as of April 2023),250,35,550,835
+E07000094,Winchester,local authorities: district / unitary (as of April 2023),365,85,520,970
+E07000095,Broxbourne,local authorities: district / unitary (as of April 2023),330,40,760,1130
+E07000096,Dacorum,local authorities: district / unitary (as of April 2023),445,80,875,1400
+E07000098,Hertsmere,local authorities: district / unitary (as of April 2023),520,70,665,1255
+E07000099,North Hertfordshire,local authorities: district / unitary (as of April 2023),265,45,530,840
+E07000102,Three Rivers,local authorities: district / unitary (as of April 2023),330,45,550,925
+E07000103,Watford,local authorities: district / unitary (as of April 2023),275,45,510,830
+E07000105,Ashford,local authorities: district / unitary (as of April 2023),330,120,660,1110
+E07000106,Canterbury,local authorities: district / unitary (as of April 2023),270,85,540,895
+E07000107,Dartford,local authorities: district / unitary (as of April 2023),310,65,720,1095
+E07000108,Dover,local authorities: district / unitary (as of April 2023),200,80,390,670
+E07000109,Gravesham,local authorities: district / unitary (as of April 2023),280,70,620,970
+E07000110,Maidstone,local authorities: district / unitary (as of April 2023),405,140,1090,1635
+E07000111,Sevenoaks,local authorities: district / unitary (as of April 2023),450,60,790,1300
+E07000112,Folkestone and Hythe,local authorities: district / unitary (as of April 2023),175,50,380,605
+E07000113,Swale,local authorities: district / unitary (as of April 2023),260,95,735,1090
+E07000114,Thanet,local authorities: district / unitary (as of April 2023),280,55,550,885
+E07000115,Tonbridge and Malling,local authorities: district / unitary (as of April 2023),360,70,810,1240
+E07000116,Tunbridge Wells,local authorities: district / unitary (as of April 2023),285,40,470,795
+E07000117,Burnley,local authorities: district / unitary (as of April 2023),80,25,280,385
+E07000118,Chorley,local authorities: district / unitary (as of April 2023),180,70,475,725
+E07000119,Fylde,local authorities: district / unitary (as of April 2023),115,35,270,420
+E07000120,Hyndburn,local authorities: district / unitary (as of April 2023),75,25,275,375
+E07000121,Lancaster,local authorities: district / unitary (as of April 2023),165,45,450,660
+E07000122,Pendle,local authorities: district / unitary (as of April 2023),115,30,305,450
+E07000123,Preston,local authorities: district / unitary (as of April 2023),245,60,495,800
+E07000124,Ribble Valley,local authorities: district / unitary (as of April 2023),125,35,290,450
+E07000125,Rossendale,local authorities: district / unitary (as of April 2023),100,40,275,415
+E07000126,South Ribble,local authorities: district / unitary (as of April 2023),190,55,475,720
+E07000127,West Lancashire,local authorities: district / unitary (as of April 2023),185,55,415,655
+E07000128,Wyre,local authorities: district / unitary (as of April 2023),150,40,465,655
+E07000129,Blaby,local authorities: district / unitary (as of April 2023),215,45,575,835
+E07000130,Charnwood,local authorities: district / unitary (as of April 2023),300,60,635,995
+E07000131,Harborough,local authorities: district / unitary (as of April 2023),205,40,420,665
+E07000132,Hinckley and Bosworth,local authorities: district / unitary (as of April 2023),210,45,465,720
+E07000133,Melton,local authorities: district / unitary (as of April 2023),115,20,240,375
+E07000134,North West Leicestershire,local authorities: district / unitary (as of April 2023),215,35,420,670
+E07000135,Oadby and Wigston,local authorities: district / unitary (as of April 2023),80,15,190,285
+E07000136,Boston,local authorities: district / unitary (as of April 2023),90,20,205,315
+E07000137,East Lindsey,local authorities: district / unitary (as of April 2023),235,65,475,775
+E07000138,Lincoln,local authorities: district / unitary (as of April 2023),140,40,285,465
+E07000139,North Kesteven,local authorities: district / unitary (as of April 2023),265,85,475,825
+E07000140,South Holland,local authorities: district / unitary (as of April 2023),185,50,435,670
+E07000141,South Kesteven,local authorities: district / unitary (as of April 2023),320,55,550,925
+E07000142,West Lindsey,local authorities: district / unitary (as of April 2023),195,60,355,610
+E07000143,Breckland,local authorities: district / unitary (as of April 2023),245,75,560,880
+E07000144,Broadland,local authorities: district / unitary (as of April 2023),305,50,705,1060
+E07000145,Great Yarmouth,local authorities: district / unitary (as of April 2023),125,30,285,440
+E07000146,King's Lynn and West Norfolk,local authorities: district / unitary (as of April 2023),365,65,705,1135
+E07000147,North Norfolk,local authorities: district / unitary (as of April 2023),220,40,375,635
+E07000148,Norwich,local authorities: district / unitary (as of April 2023),180,20,300,500
+E07000149,South Norfolk,local authorities: district / unitary (as of April 2023),260,85,580,925
+E07000170,Ashfield,local authorities: district / unitary (as of April 2023),135,40,435,610
+E07000171,Bassetlaw,local authorities: district / unitary (as of April 2023),185,75,470,730
+E07000172,Broxtowe,local authorities: district / unitary (as of April 2023),180,30,410,620
+E07000173,Gedling,local authorities: district / unitary (as of April 2023),195,35,545,775
+E07000174,Mansfield,local authorities: district / unitary (as of April 2023),170,40,435,645
+E07000175,Newark and Sherwood,local authorities: district / unitary (as of April 2023),230,45,450,725
+E07000176,Rushcliffe,local authorities: district / unitary (as of April 2023),265,35,395,695
+E07000177,Cherwell,local authorities: district / unitary (as of April 2023),295,60,625,980
+E07000178,Oxford,local authorities: district / unitary (as of April 2023),165,15,195,375
+E07000179,South Oxfordshire,local authorities: district / unitary (as of April 2023),355,60,695,1110
+E07000180,Vale of White Horse,local authorities: district / unitary (as of April 2023),310,45,575,930
+E07000181,West Oxfordshire,local authorities: district / unitary (as of April 2023),290,50,560,900
+E07000192,Cannock Chase,local authorities: district / unitary (as of April 2023),145,45,595,785
+E07000193,East Staffordshire,local authorities: district / unitary (as of April 2023),180,45,460,685
+E07000194,Lichfield,local authorities: district / unitary (as of April 2023),215,40,515,770
+E07000195,Newcastle-under-Lyme,local authorities: district / unitary (as of April 2023),155,35,365,555
+E07000196,South Staffordshire,local authorities: district / unitary (as of April 2023),235,55,570,860
+E07000197,Stafford,local authorities: district / unitary (as of April 2023),200,55,450,705
+E07000198,Staffordshire Moorlands,local authorities: district / unitary (as of April 2023),160,55,375,590
+E07000199,Tamworth,local authorities: district / unitary (as of April 2023),90,25,310,425
+E07000200,Babergh,local authorities: district / unitary (as of April 2023),195,40,460,695
+E07000202,Ipswich,local authorities: district / unitary (as of April 2023),235,50,385,670
+E07000203,Mid Suffolk,local authorities: district / unitary (as of April 2023),255,100,515,870
+E07000207,Elmbridge,local authorities: district / unitary (as of April 2023),495,45,485,1025
+E07000208,Epsom and Ewell,local authorities: district / unitary (as of April 2023),185,15,410,610
+E07000209,Guildford,local authorities: district / unitary (as of April 2023),365,65,625,1055
+E07000210,Mole Valley,local authorities: district / unitary (as of April 2023),255,30,450,735
+E07000211,Reigate and Banstead,local authorities: district / unitary (as of April 2023),420,60,820,1300
+E07000212,Runnymede,local authorities: district / unitary (as of April 2023),250,30,485,765
+E07000213,Spelthorne,local authorities: district / unitary (as of April 2023),260,40,600,900
+E07000214,Surrey Heath,local authorities: district / unitary (as of April 2023),215,45,395,655
+E07000215,Tandridge,local authorities: district / unitary (as of April 2023),310,40,600,950
+E07000216,Waverley,local authorities: district / unitary (as of April 2023),340,55,490,885
+E07000217,Woking,local authorities: district / unitary (as of April 2023),190,30,350,570
+E07000218,North Warwickshire,local authorities: district / unitary (as of April 2023),125,30,325,480
+E07000219,Nuneaton and Bedworth,local authorities: district / unitary (as of April 2023),150,40,330,520
+E07000220,Rugby,local authorities: district / unitary (as of April 2023),175,65,330,570
+E07000221,Stratford-on-Avon,local authorities: district / unitary (as of April 2023),415,60,515,990
+E07000222,Warwick,local authorities: district / unitary (as of April 2023),255,45,425,725
+E07000223,Adur,local authorities: district / unitary (as of April 2023),125,20,375,520
+E07000224,Arun,local authorities: district / unitary (as of April 2023),285,55,710,1050
+E07000225,Chichester,local authorities: district / unitary (as of April 2023),390,50,510,950
+E07000226,Crawley,local authorities: district / unitary (as of April 2023),175,20,355,550
+E07000227,Horsham,local authorities: district / unitary (as of April 2023),330,75,700,1105
+E07000228,Mid Sussex,local authorities: district / unitary (as of April 2023),345,55,760,1160
+E07000229,Worthing,local authorities: district / unitary (as of April 2023),190,20,430,640
+E07000234,Bromsgrove,local authorities: district / unitary (as of April 2023),245,45,490,780
+E07000235,Malvern Hills,local authorities: district / unitary (as of April 2023),180,35,300,515
+E07000236,Redditch,local authorities: district / unitary (as of April 2023),105,40,385,530
+E07000237,Worcester,local authorities: district / unitary (as of April 2023),130,15,250,395
+E07000238,Wychavon,local authorities: district / unitary (as of April 2023),310,50,545,905
+E07000239,Wyre Forest,local authorities: district / unitary (as of April 2023),150,20,440,610
+E07000240,St Albans,local authorities: district / unitary (as of April 2023),370,55,565,990
+E07000241,Welwyn Hatfield,local authorities: district / unitary (as of April 2023),310,30,560,900
+E07000242,East Hertfordshire,local authorities: district / unitary (as of April 2023),425,60,930,1415
+E07000243,Stevenage,local authorities: district / unitary (as of April 2023),170,45,455,670
+E07000244,East Suffolk,local authorities: district / unitary (as of April 2023),420,95,885,1400
+E07000245,West Suffolk,local authorities: district / unitary (as of April 2023),345,75,775,1195
+E08000001,Bolton,local authorities: district / unitary (as of April 2023),350,80,1005,1435
+E08000002,Bury,local authorities: district / unitary (as of April 2023),365,75,660,1100
+E08000003,Manchester,local authorities: district / unitary (as of April 2023),1035,135,855,2025
+E08000004,Oldham,local authorities: district / unitary (as of April 2023),325,65,755,1145
+E08000005,Rochdale,local authorities: district / unitary (as of April 2023),295,75,735,1105
+E08000006,Salford,local authorities: district / unitary (as of April 2023),470,70,800,1340
+E08000007,Stockport,local authorities: district / unitary (as of April 2023),495,100,1035,1630
+E08000008,Tameside,local authorities: district / unitary (as of April 2023),245,55,780,1080
+E08000009,Trafford,local authorities: district / unitary (as of April 2023),510,80,625,1215
+E08000010,Wigan,local authorities: district / unitary (as of April 2023),400,120,1275,1795
+E08000011,Knowsley,local authorities: district / unitary (as of April 2023),155,55,500,710
+E08000012,Liverpool,local authorities: district / unitary (as of April 2023),630,130,1085,1845
+E08000013,St. Helens,local authorities: district / unitary (as of April 2023),205,50,545,800
+E08000014,Sefton,local authorities: district / unitary (as of April 2023),310,110,850,1270
+E08000015,Wirral,local authorities: district / unitary (as of April 2023),345,90,805,1240
+E08000016,Barnsley,local authorities: district / unitary (as of April 2023),315,115,875,1305
+E08000017,Doncaster,local authorities: district / unitary (as of April 2023),405,185,1065,1655
+E08000018,Rotherham,local authorities: district / unitary (as of April 2023),310,110,1040,1460
+E08000019,Sheffield,local authorities: district / unitary (as of April 2023),665,120,1370,2155
+E08000021,Newcastle upon Tyne,local authorities: district / unitary (as of April 2023),350,50,580,980
+E08000022,North Tyneside,local authorities: district / unitary (as of April 2023),175,50,565,790
+E08000023,South Tyneside,local authorities: district / unitary (as of April 2023),85,25,405,515
+E08000024,Sunderland,local authorities: district / unitary (as of April 2023),200,55,680,935
+E08000025,Birmingham,local authorities: district / unitary (as of April 2023),1445,235,2260,3940
+E08000026,Coventry,local authorities: district / unitary (as of April 2023),425,85,700,1210
+E08000027,Dudley,local authorities: district / unitary (as of April 2023),390,125,1245,1760
+E08000028,Sandwell,local authorities: district / unitary (as of April 2023),455,90,825,1370
+E08000029,Solihull,local authorities: district / unitary (as of April 2023),470,110,770,1350
+E08000030,Walsall,local authorities: district / unitary (as of April 2023),350,95,875,1320
+E08000031,Wolverhampton,local authorities: district / unitary (as of April 2023),385,80,670,1135
+E08000032,Bradford,local authorities: district / unitary (as of April 2023),615,95,1355,2065
+E08000033,Calderdale,local authorities: district / unitary (as of April 2023),320,70,815,1205
+E08000034,Kirklees,local authorities: district / unitary (as of April 2023),560,115,1375,2050
+E08000035,Leeds,local authorities: district / unitary (as of April 2023),1245,215,2495,3955
+E08000036,Wakefield,local authorities: district / unitary (as of April 2023),400,125,1185,1710
+E08000037,Gateshead,local authorities: district / unitary (as of April 2023),235,50,600,885
+E09000001,City of London,local authorities: district / unitary (as of April 2023),585,65,255,905
+E09000002,Barking and Dagenham,local authorities: district / unitary (as of April 2023),900,95,1065,2060
+E09000003,Barnet,local authorities: district / unitary (as of April 2023),2115,120,1560,3795
+E09000004,Bexley,local authorities: district / unitary (as of April 2023),625,85,1415,2125
+E09000005,Brent,local authorities: district / unitary (as of April 2023),1120,155,1200,2475
+E09000006,Bromley,local authorities: district / unitary (as of April 2023),825,110,1670,2605
+E09000007,Camden,local authorities: district / unitary (as of April 2023),1205,95,790,2090
+E09000008,Croydon,local authorities: district / unitary (as of April 2023),935,105,1380,2420
+E09000009,Ealing,local authorities: district / unitary (as of April 2023),1295,100,1350,2745
+E09000010,Enfield,local authorities: district / unitary (as of April 2023),1260,110,1485,2855
+E09000011,Greenwich,local authorities: district / unitary (as of April 2023),575,90,830,1495
+E09000012,Hackney,local authorities: district / unitary (as of April 2023),860,80,790,1730
+E09000013,Hammersmith and Fulham,local authorities: district / unitary (as of April 2023),455,40,350,845
+E09000014,Haringey,local authorities: district / unitary (as of April 2023),745,60,740,1545
+E09000015,Harrow,local authorities: district / unitary (as of April 2023),1230,165,1155,2550
+E09000016,Havering,local authorities: district / unitary (as of April 2023),970,145,1905,3020
+E09000017,Hillingdon,local authorities: district / unitary (as of April 2023),1200,110,1500,2810
+E09000018,Hounslow,local authorities: district / unitary (as of April 2023),815,65,895,1775
+E09000019,Islington,local authorities: district / unitary (as of April 2023),695,65,765,1525
+E09000020,Kensington and Chelsea,local authorities: district / unitary (as of April 2023),565,20,250,835
+E09000021,Kingston upon Thames,local authorities: district / unitary (as of April 2023),445,55,560,1060
+E09000022,Lambeth,local authorities: district / unitary (as of April 2023),495,45,550,1090
+E09000023,Lewisham,local authorities: district / unitary (as of April 2023),385,70,625,1080
+E09000024,Merton,local authorities: district / unitary (as of April 2023),730,70,875,1675
+E09000025,Newham,local authorities: district / unitary (as of April 2023),1150,85,1090,2325
+E09000026,Redbridge,local authorities: district / unitary (as of April 2023),1315,115,1305,2735
+E09000027,Richmond upon Thames,local authorities: district / unitary (as of April 2023),435,40,480,955
+E09000028,Southwark,local authorities: district / unitary (as of April 2023),505,80,465,1050
+E09000029,Sutton,local authorities: district / unitary (as of April 2023),605,60,1155,1820
+E09000030,Tower Hamlets,local authorities: district / unitary (as of April 2023),615,50,430,1095
+E09000031,Waltham Forest,local authorities: district / unitary (as of April 2023),1015,85,1145,2245
+E09000032,Wandsworth,local authorities: district / unitary (as of April 2023),595,50,560,1205
+E09000033,Westminster,local authorities: district / unitary (as of April 2023),2535,85,710,3330
+N09000001,Antrim and Newtownabbey,local authorities: district / unitary (as of April 2023),180,35,375,590
+N09000002,"Armagh City, Banbridge and Craigavon",local authorities: district / unitary (as of April 2023),395,130,830,1355
+N09000003,Belfast,local authorities: district / unitary (as of April 2023),405,45,520,970
+N09000004,Causeway Coast and Glens,local authorities: district / unitary (as of April 2023),310,100,660,1070
+N09000005,Derry City and Strabane,local authorities: district / unitary (as of April 2023),280,80,570,930
+N09000006,Fermanagh and Omagh,local authorities: district / unitary (as of April 2023),320,145,755,1220
+N09000007,Lisburn and Castlereagh,local authorities: district / unitary (as of April 2023),275,70,420,765
+N09000008,Mid and East Antrim,local authorities: district / unitary (as of April 2023),185,50,430,665
+N09000009,Mid Ulster,local authorities: district / unitary (as of April 2023),470,175,1045,1690
+N09000010,"Newry, Mourne and Down",local authorities: district / unitary (as of April 2023),525,125,1125,1775
+N09000011,Ards and North Down,local authorities: district / unitary (as of April 2023),215,35,340,590
+S12000005,Clackmannanshire,local authorities: district / unitary (as of April 2023),30,10,100,140
+S12000006,Dumfries and Galloway,local authorities: district / unitary (as of April 2023),145,70,565,780
+S12000008,East Ayrshire,local authorities: district / unitary (as of April 2023),100,65,335,500
+S12000010,East Lothian,local authorities: district / unitary (as of April 2023),125,15,360,500
+S12000011,East Renfrewshire,local authorities: district / unitary (as of April 2023),80,20,235,335
+S12000013,Na h-Eileanan Siar,local authorities: district / unitary (as of April 2023),35,20,75,130
+S12000014,Falkirk,local authorities: district / unitary (as of April 2023),100,45,410,555
+S12000017,Highland,local authorities: district / unitary (as of April 2023),340,165,1220,1725
+S12000018,Inverclyde,local authorities: district / unitary (as of April 2023),35,10,105,150
+S12000019,Midlothian,local authorities: district / unitary (as of April 2023),110,15,405,530
+S12000020,Moray,local authorities: district / unitary (as of April 2023),85,25,395,505
+S12000021,North Ayrshire,local authorities: district / unitary (as of April 2023),90,40,320,450
+S12000023,Orkney Islands,local authorities: district / unitary (as of April 2023),50,10,95,155
+S12000026,Scottish Borders,local authorities: district / unitary (as of April 2023),160,45,480,685
+S12000027,Shetland Islands,local authorities: district / unitary (as of April 2023),60,25,120,205
+S12000028,South Ayrshire,local authorities: district / unitary (as of April 2023),110,30,340,480
+S12000029,South Lanarkshire,local authorities: district / unitary (as of April 2023),325,120,1190,1635
+S12000030,Stirling,local authorities: district / unitary (as of April 2023),135,45,335,515
+S12000033,Aberdeen City,local authorities: district / unitary (as of April 2023),175,45,495,715
+S12000034,Aberdeenshire,local authorities: district / unitary (as of April 2023),335,100,1205,1640
+S12000035,Argyll and Bute,local authorities: district / unitary (as of April 2023),105,60,305,470
+S12000036,City of Edinburgh,local authorities: district / unitary (as of April 2023),655,70,1080,1805
+S12000038,Renfrewshire,local authorities: district / unitary (as of April 2023),155,55,560,770
+S12000039,West Dunbartonshire,local authorities: district / unitary (as of April 2023),35,20,235,290
+S12000040,West Lothian,local authorities: district / unitary (as of April 2023),170,40,540,750
+S12000041,Angus,local authorities: district / unitary (as of April 2023),110,30,410,550
+S12000042,Dundee City,local authorities: district / unitary (as of April 2023),130,20,405,555
+S12000045,East Dunbartonshire,local authorities: district / unitary (as of April 2023),100,35,305,440
+S12000047,Fife,local authorities: district / unitary (as of April 2023),300,85,1045,1430
+S12000048,Perth and Kinross,local authorities: district / unitary (as of April 2023),225,55,640,920
+S12000049,Glasgow City,local authorities: district / unitary (as of April 2023),545,135,1470,2150
+S12000050,North Lanarkshire,local authorities: district / unitary (as of April 2023),325,115,1205,1645
+W06000001,Isle of Anglesey,local authorities: district / unitary (as of April 2023),105,35,275,415
+W06000002,Gwynedd,local authorities: district / unitary (as of April 2023),205,80,450,735
+W06000003,Conwy,local authorities: district / unitary (as of April 2023),145,65,400,610
+W06000004,Denbighshire,local authorities: district / unitary (as of April 2023),145,55,300,500
+W06000005,Flintshire,local authorities: district / unitary (as of April 2023),200,70,520,790
+W06000006,Wrexham,local authorities: district / unitary (as of April 2023),175,55,480,710
+W06000008,Ceredigion,local authorities: district / unitary (as of April 2023),150,35,330,515
+W06000009,Pembrokeshire,local authorities: district / unitary (as of April 2023),225,60,435,720
+W06000010,Carmarthenshire,local authorities: district / unitary (as of April 2023),345,85,615,1045
+W06000011,Swansea,local authorities: district / unitary (as of April 2023),300,50,690,1040
+W06000012,Neath Port Talbot,local authorities: district / unitary (as of April 2023),120,40,360,520
+W06000013,Bridgend,local authorities: district / unitary (as of April 2023),150,45,385,580
+W06000014,Vale of Glamorgan,local authorities: district / unitary (as of April 2023),195,40,380,615
+W06000015,Cardiff,local authorities: district / unitary (as of April 2023),510,85,845,1440
+W06000016,Rhondda Cynon Taf,local authorities: district / unitary (as of April 2023),280,120,685,1085
+W06000018,Caerphilly,local authorities: district / unitary (as of April 2023),185,70,515,770
+W06000019,Blaenau Gwent,local authorities: district / unitary (as of April 2023),65,20,160,245
+W06000020,Torfaen,local authorities: district / unitary (as of April 2023),100,30,305,435
+W06000021,Monmouthshire,local authorities: district / unitary (as of April 2023),180,35,300,515
+W06000022,Newport,local authorities: district / unitary (as of April 2023),155,40,385,580
+W06000023,Powys,local authorities: district / unitary (as of April 2023),330,110,545,985
+W06000024,Merthyr Tydfil,local authorities: district / unitary (as of April 2023),45,40,165,250

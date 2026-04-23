@@ -13,6 +13,7 @@ from .synthetic_portfolio import build_synthetic_metrics
 
 MAP_PAYLOAD_COLUMNS = [
     "PostDist",
+    "thi_score",
     "market_opportunity_score",
     "retention_health",
     "competition_pressure",

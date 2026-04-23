@@ -175,6 +175,7 @@ def render_vector_tile_map(
         }};
 
         function activeCategoryKey() {{
+          if (state.segment && state.segment !== "All") return null;
           return categoryPalettes[state.segment_mode] ? state.segment_mode : null;
         }}
 

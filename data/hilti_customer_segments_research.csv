@@ -1,0 +1,5 @@
+segment,sic_proxy,location_dataset,reason
+General building contractors and subcontractors,41 Construction of buildings; 43 Specialised construction activities,Nomis UK Business Counts local units by SIC 41 and 43,"Core users of power tools, anchors, fastening, firestop, jobsite consumables and fleet services"
+Civil engineering and infrastructure contractors,42 Civil engineering,Nomis UK Business Counts local units by SIC 42,"Heavy-duty tools, anchors, rebar, rail/road/utility applications and engineering support"
+"MEP, electrical, plumbing and HVAC contractors",43 Specialised construction activities; electrical/plumbing sub-classes under SIC 432,Nomis UK Business Counts SIC 43 plus competitor branch adjacency for CEF/Wolseley/City Plumbing,"Installers use drilling, fastening, firestop, channel/support systems and consumables"
+"Large project owners, developers and main contractors",Construction local unit density plus population/urban demand proxy,ONS local authority population and Nomis construction local-unit counts,"Demand concentrates around urban construction activity, infrastructure and large jobsite density"
