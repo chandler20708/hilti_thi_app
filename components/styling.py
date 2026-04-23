@@ -137,5 +137,47 @@ APP_CSS = """
     color: #101828;
     font-size: 1rem;
   }
+
+  .external-context {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin: 0.65rem 0 0.35rem 0;
+  }
+
+  .external-context > div {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(16, 24, 40, 0.08);
+    border-radius: 16px;
+    padding: 0.95rem 1rem;
+  }
+
+  .external-kicker {
+    color: #475467;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+  }
+
+  .external-context strong {
+    display: block;
+    color: #101828;
+    font-size: 1.1rem;
+    line-height: 1.25;
+    margin-bottom: 0.35rem;
+  }
+
+  .external-context span {
+    color: #667085;
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+
+  @media (max-width: 900px) {
+    .external-context {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 """

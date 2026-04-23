@@ -53,7 +53,10 @@
     "population_local_authority_mid2024": 361,
     "customer_proxy_construction_rows": 1083,
     "customer_proxy_summary_areas": 361,
-    "population_time_series_current": 55
+    "population_time_series_current": 55,
+    "power_tool_manufacturer_competitors": 4,
+    "power_tool_authorised_locations": 470,
+    "power_tool_distribution_proxy": 19
   },
   "overpass_exact_selector_counts": {
     "Screwfix": 672,
@@ -84,5 +87,12 @@
   "overpass_city_plumbing_counts": {
     "City Plumbing": 87,
     "City Plumbing Supplies": 20
+  },
+  "power_tool_manufacturer_research_errors": [],
+  "power_tool_manufacturer_sources": {
+    "DEWALT": "https://service.dewalt.co.uk/DEWALT/GB/en-GB/AgentLocator/SearchAgentLocators",
+    "Milwaukee Tool": "https://uk.milwaukeetool.eu/header/service/find-a-store/",
+    "Makita": "https://www.makitauk.com/dealer-locator.html",
+    "Bosch Professional": "https://www.bosch-professional.com/gb/en/dl/dealerlocator/dealersearch/"
   }
 }

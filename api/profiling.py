@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import logging
 import os
+import json
 import time
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Iterator
 
-import orjson
+try:
+    import orjson
+except ModuleNotFoundError:  # pragma: no cover - deployment fallback
+    orjson = None
 
 _LOGGER = logging.getLogger("hilti.map_api.profile")
 
@@ -125,7 +129,11 @@ class RequestProfile:
         }
         if extra:
             payload.update(extra)
-        _LOGGER.info(orjson.dumps(payload).decode("utf-8"))
+        if orjson is not None:
+            message = orjson.dumps(payload).decode("utf-8")
+        else:
+            message = json.dumps(payload, separators=(",", ":"), default=str)
+        _LOGGER.info(message)
 
 
 @dataclass

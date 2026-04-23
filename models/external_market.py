@@ -77,6 +77,26 @@ def load_customer_segments() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def load_power_tool_manufacturer_competitors() -> pd.DataFrame:
+    return _read_csv("hilti_power_tool_manufacturer_competitors.csv")
+
+
+@lru_cache(maxsize=1)
+def load_power_tool_authorised_locations() -> pd.DataFrame:
+    locations = _read_csv("hilti_power_tool_authorised_locations.csv")
+    locations["distance_to_nearest_hilti_km"] = pd.to_numeric(
+        locations["distance_to_nearest_hilti_km"],
+        errors="coerce",
+    )
+    return locations
+
+
+@lru_cache(maxsize=1)
+def load_power_tool_distribution_proxy() -> pd.DataFrame:
+    return _read_csv("hilti_power_tool_distribution_proxy.csv")
+
+
+@lru_cache(maxsize=1)
 def load_external_source_manifest() -> dict[str, Any]:
     path = _data_path("hilti_external_dataset_sources.json")
     if not path.exists():
@@ -115,3 +135,64 @@ def customer_segment_metric(segment_label: str) -> tuple[str, str]:
     if segment_label == "Specialist trades / MEP":
         return "specialised_construction_local_units", "SIC 43 specialist trades"
     return "construction_customer_proxy_local_units_total", "Total construction local units"
+
+
+def build_overview_external_context(hilti_store_names: tuple[str, ...] = ()) -> dict[str, Any]:
+    stores = load_competitor_store_locations()
+    demand = load_market_demand_frame()
+
+    pressure = stores.loc[
+        stores["threat_band"].isin(
+            [
+                "0-2 km direct local threat",
+                "2-5 km strong urban overlap",
+                "5-10 km metro overlap",
+            ]
+        )
+    ].copy()
+    if hilti_store_names:
+        pressure = pressure.loc[pressure["nearest_hilti_store"].isin(hilti_store_names)]
+
+    pressure_by_store = (
+        pressure.groupby("nearest_hilti_store", observed=True)
+        .agg(
+            competitor_branches_10km=("competitor", "size"),
+            competitor_chains_10km=("competitor", "nunique"),
+            closest_competitor_km=("distance_to_nearest_hilti_km", "min"),
+        )
+        .reset_index()
+        .sort_values("competitor_branches_10km", ascending=False)
+    )
+
+    if pressure_by_store.empty:
+        pressure_summary = {
+            "store": "No local pressure",
+            "branches": 0,
+            "chains": 0,
+            "closest_km": None,
+        }
+    else:
+        row = pressure_by_store.iloc[0]
+        pressure_summary = {
+            "store": row["nearest_hilti_store"],
+            "branches": int(row["competitor_branches_10km"]),
+            "chains": int(row["competitor_chains_10km"]),
+            "closest_km": float(row["closest_competitor_km"]),
+        }
+
+    top_demand = demand.sort_values(
+        "construction_customer_proxy_local_units_total",
+        ascending=False,
+    ).iloc[0]
+    demand_summary = {
+        "area": str(top_demand["area_name"]),
+        "construction_units": int(top_demand["construction_customer_proxy_local_units_total"]),
+        "units_per_10k_people": float(top_demand["construction_units_per_10k_people"]),
+        "population": int(top_demand["population_mid_2024"]),
+    }
+
+    return {
+        "pressure_summary": pressure_summary,
+        "pressure_by_store": pressure_by_store,
+        "demand_summary": demand_summary,
+    }

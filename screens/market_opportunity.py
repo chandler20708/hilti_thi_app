@@ -6,6 +6,7 @@ import streamlit as st
 
 from controllers.filters import apply_filters, get_focus_record
 from models.district_data import build_map_frame, get_filter_options, load_prototype_geo_dataframe
+from models.external_market import build_overview_external_context
 from models.scoring import score_thi
 from models.store_locations import load_hilti_store_locations
 from components.map_component import render_leaflet_metric_map
@@ -21,6 +22,49 @@ from components.shared import (
     render_territory_detail,
     render_thi_controls,
 )
+
+
+def _render_external_context_panel(visible_stores) -> None:
+    store_names = tuple(visible_stores["name"].dropna().astype(str).tolist())
+    context = build_overview_external_context(store_names)
+    pressure = context["pressure_summary"]
+    demand = context["demand_summary"]
+    pressure_table = context["pressure_by_store"].head(5).copy()
+
+    closest_text = "N/A" if pressure["closest_km"] is None else f"{pressure['closest_km']:.1f} km"
+    st.markdown(
+        f"""
+        <div class="external-context">
+          <div>
+            <div class="external-kicker">External pressure</div>
+            <strong>{pressure["branches"]:,} competitor branches within 10 km</strong>
+            <span>{pressure["chains"]:,} chains around {pressure["store"]}; closest overlap {closest_text}.</span>
+          </div>
+          <div>
+            <div class="external-kicker">Construction demand</div>
+            <strong>{demand["construction_units"]:,} local construction units</strong>
+            <span>Highest public-demand proxy is {demand["area"]} ({demand["units_per_10k_people"]:.1f} units per 10k people).</span>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("External signal detail", expanded=False):
+        st.caption("These are compact context signals from the External Market Intelligence datasets. They are not used to recalculate the THI score yet.")
+        if pressure_table.empty:
+            st.info("No mapped competitor branches within 10 km for the current Hilti store scope.")
+        else:
+            display = pressure_table.rename(
+                columns={
+                    "nearest_hilti_store": "Hilti store",
+                    "competitor_branches_10km": "Competitor branches within 10km",
+                    "competitor_chains_10km": "Competitor chains",
+                    "closest_competitor_km": "Closest competitor km",
+                }
+            )
+            display["Closest competitor km"] = display["Closest competitor km"].map(lambda value: f"{value:.1f}")
+            st.dataframe(display, width="stretch", hide_index=True)
 
 
 def render_page() -> None:
@@ -84,6 +128,7 @@ def render_page() -> None:
         ],
         scope_frame=scope_frame
     )
+    _render_external_context_panel(visible_stores)
     if scope_frame.empty:
         st.warning("No territories match the current geography and segment slice. Broaden the segment filter or switch city scope.")
     st.markdown('<div style="height:0.4rem;"></div>', unsafe_allow_html=True)
