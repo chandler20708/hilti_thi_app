@@ -95,6 +95,8 @@ def _mvt_properties(row: pd.Series) -> dict[str, Any]:
         "thi_score",
         "competition_pressure",
         "primary_segment",
+        "size_class",
+        "activity_class",
         "data_source",
     ):
         val = row.get(key)

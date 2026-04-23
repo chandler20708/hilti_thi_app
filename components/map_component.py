@@ -144,6 +144,19 @@ def render_leaflet_metric_map(
           background: linear-gradient(90deg, #ea4335 0%, #fbbc04 50%, #34a853 100%);
           margin: 8px 0 4px 0;
         }}
+        .legend-row {{
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          margin-top: 4px;
+        }}
+        .legend-dot {{
+          width: 10px;
+          height: 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(16,24,40,0.22);
+          flex: 0 0 auto;
+        }}
         .hilti-store-icon {{
           width: 22px;
           height: 22px;
@@ -180,6 +193,53 @@ def render_leaflet_metric_map(
         const responseCacheMaxEntries = 12;
         const storageKey = "hilti_market_map_state_" + state.metric_key;
         const defaultBounds = [[49.8, -8.2], [60.9, 2.2]];
+        const segmentModeLabels = {{
+          primary_segment: "Primary Segment",
+          size_class: "Size Class",
+          activity_class: "Activity Class"
+        }};
+        const categoryPalettes = {{
+          size_class: {{
+            A: "#14532d",
+            B: "#22c55e",
+            C: "#facc15",
+            D: "#f97316",
+            E: "#dc2626"
+          }},
+          activity_class: {{
+            FTC: "#2563eb",
+            EFA: "#15803d",
+            E: "#22c55e",
+            F: "#84cc16",
+            A: "#facc15",
+            P: "#f97316",
+            "Non-EFA": "#94a3b8",
+            Focus: "#c8102e"
+          }}
+        }};
+        const categoryLabels = {{
+          size_class: {{
+            A: "A Class",
+            B: "B Class",
+            C: "C Class",
+            D: "D Class",
+            E: "E Class"
+          }},
+          activity_class: {{
+            FTC: "FTC",
+            EFA: "EFA",
+            E: "Engaged",
+            F: "Frequent",
+            A: "Active",
+            P: "Passive",
+            "Non-EFA": "Non-EFA",
+            Focus: "Focus"
+          }}
+        }};
+
+        function activeCategoryKey() {{
+          return categoryPalettes[state.segment_mode] ? state.segment_mode : null;
+        }}
 
         const map = L.map("{map_id}", {{
           center: [54.5, -3.0],
@@ -215,11 +275,24 @@ def render_leaflet_metric_map(
         const legend = L.control({{position: "bottomright"}});
         legend.onAdd = function() {{
           const div = L.DomUtil.create("div", "legend");
-          div.innerHTML = `
-            <div><strong>${{state.metric_label}}</strong></div>
-            <div class="legend-scale"></div>
-            <div style="display:flex;justify-content:space-between;"><span>Low</span><span>High</span></div>
-          `;
+          const categoryKey = activeCategoryKey();
+          if (categoryKey) {{
+            const palette = categoryPalettes[categoryKey];
+            const labels = categoryLabels[categoryKey] || {{}};
+            const rows = Object.keys(palette).map((key) => `
+              <div class="legend-row">
+                <span class="legend-dot" style="background:${{palette[key]}}"></span>
+                <span>${{labels[key] || key}}</span>
+              </div>
+            `).join("");
+            div.innerHTML = `<div><strong>${{segmentModeLabels[categoryKey] || "Segment"}}</strong></div>${{rows}}`;
+          }} else {{
+            div.innerHTML = `
+              <div><strong>${{state.metric_label}}</strong></div>
+              <div class="legend-scale"></div>
+              <div style="display:flex;justify-content:space-between;"><span>Low</span><span>High</span></div>
+            `;
+          }}
           return div;
         }};
         legend.addTo(map);
@@ -231,17 +304,28 @@ def render_leaflet_metric_map(
           return "#34a853";
         }}
 
+        function colorForFeature(feature) {{
+          const p = feature.properties || {{}};
+          const categoryKey = activeCategoryKey();
+          if (categoryKey) {{
+            return categoryPalettes[categoryKey][p[categoryKey]] || "#d0d5dd";
+          }}
+          const value = p[state.metric_key];
+          return value === null || value === undefined ? "#d0d5dd" : colorForMetric(value);
+        }}
+
         function styleFeature(feature) {{
           const p = feature.properties || {{}};
           if (feature.geometry && feature.geometry.type === "Point") {{
             return {{}};
           }}
           const value = p[state.metric_key];
-          if (value === null || value === undefined) {{
+          const categoryKey = activeCategoryKey();
+          if (!categoryKey && (value === null || value === undefined)) {{
             return {{
               color: "#98a2b3",
               weight: 0.75,
-              fillColor: "#d0d5dd",
+              fillColor: colorForFeature(feature),
               fillOpacity: 0.12
             }};
           }}
@@ -251,19 +335,17 @@ def render_leaflet_metric_map(
           return {{
             color: isFocus ? "#101828" : "#4b2e17",
             weight: isFocus ? 2.0 : 0.8,
-            fillColor: colorForMetric(value),
+            fillColor: colorForFeature(feature),
             fillOpacity: isFocus ? 0.74 : 0.58
           }};
         }}
 
         function pointToLayer(feature, latlng) {{
-          const p = feature.properties || {{}};
-          const value = p[state.metric_key];
           return L.circleMarker(latlng, {{
             radius: map.getZoom() >= 7 ? 5 : 3.8,
             color: "#ffffff",
             weight: 1,
-            fillColor: value === null || value === undefined ? "#98a2b3" : colorForMetric(value),
+            fillColor: colorForFeature(feature),
             fillOpacity: 0.92
           }});
         }}
@@ -278,6 +360,8 @@ def render_leaflet_metric_map(
               <div><b>Retention health</b>: ${{p.retention_health ?? "N/A"}}</div>
               <div><b>Competition</b>: ${{p.competition_pressure ?? "N/A"}}</div>
               <div><b>Segment</b>: ${{p.primary_segment || "N/A"}}</div>
+              <div><b>Size class</b>: ${{p.size_class || "N/A"}}</div>
+              <div><b>Activity class</b>: ${{p.activity_class || "N/A"}}</div>
               <div><b>Leads</b>: ${{p.lead_volume ?? "N/A"}}</div>
               <div><b>Accounts</b>: ${{p.existing_accounts ?? "N/A"}}</div>
               <div><b>Source</b>: ${{p.data_source || "N/A"}}</div>

@@ -101,6 +101,13 @@ def render_vector_tile_map(
           background: linear-gradient(90deg, #ea4335 0%, #fbbc04 50%, #34a853 100%);
           margin: 8px 0 4px 0;
         }}
+        .legend-row {{
+          display: flex; align-items: center; gap: 7px; margin-top: 4px;
+        }}
+        .legend-dot {{
+          width: 10px; height: 10px; border-radius: 999px;
+          border: 1px solid rgba(16,24,40,0.22); flex: 0 0 auto;
+        }}
       </style>
     </head>
     <body>
@@ -108,11 +115,7 @@ def render_vector_tile_map(
         <div class="badge">Executive territory view</div>
         <div id="loading" class="loading">Loading district tiles…</div>
         <button type="button" id="recenterBtn" class="recenter-btn">Recenter map</button>
-        <div class="legend">
-          <div><strong>{html_module.escape(metric_label)}</strong></div>
-          <div class="legend-scale"></div>
-          <div style="display:flex;justify-content:space-between;"><span>Low</span><span>High</span></div>
-        </div>
+        <div id="legend" class="legend"></div>
         <div id="{map_id}"></div>
       </div>
       <script>
@@ -124,8 +127,70 @@ def render_vector_tile_map(
         const stores = state.store_locations || [];
         const loadingEl = document.getElementById("loading");
         const recenterBtn = document.getElementById("recenterBtn");
+        const legendEl = document.getElementById("legend");
 
         const defaultBounds = [[-8.2, 49.8], [2.2, 60.9]];
+        const segmentModeLabels = {{
+          primary_segment: "Primary Segment",
+          size_class: "Size Class",
+          activity_class: "Activity Class"
+        }};
+        const categoryPalettes = {{
+          size_class: {{
+            A: "#14532d",
+            B: "#22c55e",
+            C: "#facc15",
+            D: "#f97316",
+            E: "#dc2626"
+          }},
+          activity_class: {{
+            FTC: "#2563eb",
+            EFA: "#15803d",
+            E: "#22c55e",
+            F: "#84cc16",
+            A: "#facc15",
+            P: "#f97316",
+            "Non-EFA": "#94a3b8",
+            Focus: "#c8102e"
+          }}
+        }};
+        const categoryLabels = {{
+          size_class: {{
+            A: "A Class",
+            B: "B Class",
+            C: "C Class",
+            D: "D Class",
+            E: "E Class"
+          }},
+          activity_class: {{
+            FTC: "FTC",
+            EFA: "EFA",
+            E: "Engaged",
+            F: "Frequent",
+            A: "Active",
+            P: "Passive",
+            "Non-EFA": "Non-EFA",
+            Focus: "Focus"
+          }}
+        }};
+
+        function activeCategoryKey() {{
+          return categoryPalettes[state.segment_mode] ? state.segment_mode : null;
+        }}
+
+        function renderLegend() {{
+          const categoryKey = activeCategoryKey();
+          if (categoryKey) {{
+            const palette = categoryPalettes[categoryKey];
+            const labels = categoryLabels[categoryKey] || {{}};
+            const rows = Object.keys(palette).map((key) => (
+              "<div class='legend-row'><span class='legend-dot' style='background:" + palette[key] + "'></span><span>" + (labels[key] || key) + "</span></div>"
+            )).join("");
+            legendEl.innerHTML = "<div><strong>" + (segmentModeLabels[categoryKey] || "Segment") + "</strong></div>" + rows;
+          }} else {{
+            legendEl.innerHTML = "<div><strong>{html_module.escape(metric_label)}</strong></div><div class='legend-scale'></div><div style='display:flex;justify-content:space-between;'><span>Low</span><span>High</span></div>";
+          }}
+        }}
 
         function focusLngLatBounds() {{
           if (!focus || !focus.bounds) return null;
@@ -167,6 +232,7 @@ def render_vector_tile_map(
         }});
 
         map.on("load", () => {{
+          renderLegend();
           const tileUrl = apiBase + "/tiles/{{z}}/{{x}}/{{y}}.mvt?" + tileQs;
           map.addSource("districts", {{
             type: "vector",
@@ -176,7 +242,12 @@ def render_vector_tile_map(
             maxzoom: 14
           }});
 
-          const fillColor = [
+          const categoryKey = activeCategoryKey();
+          const fillColor = categoryKey ? [
+            "match", ["get", categoryKey],
+            ...Object.entries(categoryPalettes[categoryKey]).flatMap(([key, color]) => [key, color]),
+            "#d0d5dd"
+          ] : [
             "interpolate", ["linear"], ["to-number", ["coalesce", ["get", metricKey], 0]],
             0, "#ea4335",
             50, "#fbbc04",
