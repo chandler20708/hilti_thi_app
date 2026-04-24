@@ -44,6 +44,12 @@ def load_competitor_store_locations() -> pd.DataFrame:
         merged["distance_to_nearest_hilti_km"],
         errors="coerce",
     )
+    local_authority_path = _data_path("competitor_store_local_authority_lookup.csv")
+    if local_authority_path.exists():
+        lookup = pd.read_csv(local_authority_path).loc[
+            :, ["osm_type", "osm_id", "local_authority_code", "local_authority_name"]
+        ]
+        merged = merged.merge(lookup, on=["osm_type", "osm_id"], how="left")
     return merged
 
 
@@ -138,7 +144,7 @@ def customer_segment_metric(segment_label: str) -> tuple[str, str]:
 
 
 def build_overview_external_context(
-    hilti_store_names: tuple[str, ...] = (),
+    hilti_store_names: tuple[str, ...] | None = None,
     local_authority_name: str | None = None,
 ) -> dict[str, Any]:
     stores = load_competitor_store_locations()
@@ -153,8 +159,46 @@ def build_overview_external_context(
             ]
         )
     ].copy()
-    if hilti_store_names:
+    if hilti_store_names is not None:
         pressure = pressure.loc[pressure["nearest_hilti_store"].isin(hilti_store_names)]
+
+    if local_authority_name and local_authority_name != "All" and "local_authority_name" in stores.columns:
+        authority_competitors = stores.loc[stores["local_authority_name"] == local_authority_name].copy()
+        authority_label = local_authority_name
+    else:
+        authority_competitors = stores.copy()
+        authority_label = "UK"
+
+    authority_competitors_by_chain = (
+        authority_competitors.groupby("competitor", observed=True)
+        .agg(
+            mapped_locations=("competitor", "size"),
+            direct_threat_locations=(
+                "threat_band",
+                lambda values: int(
+                    values.isin(
+                        [
+                            "0-2 km direct local threat",
+                            "2-5 km strong urban overlap",
+                            "5-10 km metro overlap",
+                        ]
+                    ).sum()
+                ),
+            ),
+        )
+        .reset_index()
+        .sort_values(["mapped_locations", "competitor"], ascending=[False, True])
+    )
+    authority_pressure_summary = {
+        "area": authority_label,
+        "locations": int(len(authority_competitors)),
+        "chains": int(authority_competitors["competitor"].nunique()),
+        "top_competitor": (
+            str(authority_competitors_by_chain.iloc[0]["competitor"])
+            if not authority_competitors_by_chain.empty
+            else "N/A"
+        ),
+    }
 
     pressure_by_store = (
         pressure.groupby("nearest_hilti_store", observed=True)
@@ -204,6 +248,8 @@ def build_overview_external_context(
     return {
         "pressure_summary": pressure_summary,
         "pressure_by_store": pressure_by_store,
+        "authority_pressure_summary": authority_pressure_summary,
+        "authority_competitors_by_chain": authority_competitors_by_chain,
         "demand_summary": demand_summary,
         "demand_options": demand_options,
     }

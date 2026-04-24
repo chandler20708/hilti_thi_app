@@ -4,6 +4,8 @@ from functools import lru_cache
 
 import pandas as pd
 
+from config import APP_ROOT
+
 
 # Coordinates are taken from the official Hilti UK store pages' "Get Directions"
 # links, which point to Google Maps with exact lat/lon values.
@@ -94,4 +96,15 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
 
 @lru_cache(maxsize=1)
 def load_hilti_store_locations() -> pd.DataFrame:
-    return pd.DataFrame(HILTI_UK_STORES)
+    stores = pd.DataFrame(HILTI_UK_STORES)
+    lookup_path = APP_ROOT / "data" / "postcode_district_local_authority_lookup.csv"
+    if not lookup_path.exists():
+        return stores
+
+    lookup = pd.read_csv(
+        lookup_path,
+        usecols=["PostDist", "local_authority_code", "local_authority_name"],
+    ).rename(columns={"PostDist": "district"})
+    lookup["district"] = lookup["district"].astype(str).str.upper().str.strip()
+    stores["district"] = stores["district"].astype(str).str.upper().str.strip()
+    return stores.merge(lookup, on="district", how="left")

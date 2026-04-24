@@ -8,7 +8,7 @@ import pandas as pd
 from pyogrio.errors import DataSourceError
 
 from api.profiling import RequestProfile
-from config import DATASET_PATH, DISTRICT_DATA_PATH
+from config import APP_ROOT, DATASET_PATH, DISTRICT_DATA_PATH
 from .synthetic_portfolio import build_synthetic_metrics
 
 MAP_PAYLOAD_COLUMNS = [
@@ -57,6 +57,7 @@ SEGMENT_MODE_LABELS = {
     "size_class": "Size Class",
     "activity_class": "Activity Class",
 }
+LOCAL_AUTHORITY_LOOKUP_PATH = APP_ROOT / "data" / "postcode_district_local_authority_lookup.csv"
 
 
 def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
@@ -133,6 +134,17 @@ def load_observed_metrics() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def load_district_local_authority_lookup() -> pd.DataFrame:
+    if not LOCAL_AUTHORITY_LOOKUP_PATH.exists():
+        raise FileNotFoundError(
+            f"District-to-local-authority lookup not found at {LOCAL_AUTHORITY_LOOKUP_PATH}."
+        )
+    lookup = pd.read_csv(LOCAL_AUTHORITY_LOOKUP_PATH)
+    lookup["PostDist"] = lookup["PostDist"].astype(str).str.upper().str.strip()
+    return lookup
+
+
+@lru_cache(maxsize=1)
 def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
     if not DISTRICT_DATA_PATH.exists():
         raise FileNotFoundError(
@@ -156,11 +168,17 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
 
     observed = load_observed_metrics().copy()
     observed["observed_flag"] = True
+    local_authority_lookup = load_district_local_authority_lookup().copy()
 
     merged = geo.merge(
         observed,
         left_on="PostDist",
         right_on="Postal District",
+        how="left",
+    )
+    merged = merged.merge(
+        local_authority_lookup,
+        on="PostDist",
         how="left",
     )
     merged["observed_flag"] = merged["observed_flag"].astype("boolean").fillna(False).astype(bool)
@@ -193,6 +211,7 @@ def get_filter_options(gdf: gpd.GeoDataFrame) -> dict[str, list[str]]:
     return {
         "districts": ["All"] + sorted(gdf["PostDist"].dropna().unique().tolist()),
         "sprawls": ["All"] + sorted(gdf["Sprawl"].dropna().unique().tolist()),
+        "local_authorities": ["All"] + sorted(gdf["local_authority_name"].dropna().unique().tolist()),
         "segments": ["All"] + sorted(gdf["primary_segment"].dropna().unique().tolist()),
         "segment_modes": SEGMENT_MODE_LABELS,
         "segments_by_mode": {

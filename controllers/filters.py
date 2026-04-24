@@ -10,7 +10,9 @@ def build_filter_mask(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> pd.S
     mask = pd.Series(True, index=gdf.index)
     if filters.get("post_area") and filters["post_area"] != "All" and "PostArea" in gdf.columns:
         mask &= gdf["PostArea"] == filters["post_area"]
-    if filters.get("sprawl") and filters["sprawl"] != "All":
+    if filters.get("local_authority") and filters["local_authority"] != "All":
+        mask &= gdf["local_authority_name"] == filters["local_authority"]
+    elif filters.get("sprawl") and filters["sprawl"] != "All":
         mask &= gdf["Sprawl"] == filters["sprawl"]
     if filters.get("district") and filters["district"] != "All":
         mask &= gdf["PostDist"] == filters["district"]
@@ -31,12 +33,16 @@ def apply_filters(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> gpd.GeoD
 
 def get_focus_record(gdf: gpd.GeoDataFrame, filters: dict[str, object]) -> dict[str, object] | None:
     district = filters.get("district")
+    local_authority = filters.get("local_authority")
     sprawl = filters.get("sprawl")
 
     # Only geographic filters should drive viewport changes.
     if district and district != "All":
         subset = gdf.loc[gdf["PostDist"] == district]
         label = f"Territory: {district}"
+    elif local_authority and local_authority != "All":
+        subset = gdf.loc[gdf["local_authority_name"] == local_authority]
+        label = f"Local authority: {local_authority}"
     elif sprawl and sprawl != "All":
         subset = gdf.loc[gdf["Sprawl"] == sprawl]
         label = f"City: {sprawl}"

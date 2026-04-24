@@ -52,14 +52,14 @@ METRIC_CONFIG = {
 
 
 def build_analysis_filters(
-    city: str,
+    local_authority: str,
     segment: str,
     district: str = "All",
     segment_mode: str = "primary_segment",
 ) -> dict[str, str]:
     return {
         "district": district,
-        "sprawl": city,
+        "local_authority": local_authority,
         "segment": segment,
         "segment_mode": segment_mode,
     }
@@ -213,24 +213,28 @@ def render_app_frame(
 
 
 def render_sidebar_controls(
-    city_options: list[str],
+    local_authority_options: list[str],
     segment_modes: dict[str, str],
     segments_by_mode: dict[str, list[str]],
-    territories_by_city: dict[str, list[str]],
-    default_city: str,
+    territories_by_local_authority: dict[str, list[str]],
+    default_local_authority: str,
 ) -> dict[str, str]:
-    default_city_value = default_city if default_city in city_options else city_options[0]
+    default_local_authority_value = (
+        default_local_authority
+        if default_local_authority in local_authority_options
+        else local_authority_options[0]
+    )
     with st.sidebar:
         st.markdown("### Controls")
-        if st.session_state.get("sidebar_city") not in city_options:
-            st.session_state["sidebar_city"] = default_city_value
+        if st.session_state.get("sidebar_local_authority") not in local_authority_options:
+            st.session_state["sidebar_local_authority"] = default_local_authority_value
         if st.session_state.get("sidebar_metric_key") not in METRIC_CONFIG:
             st.session_state["sidebar_metric_key"] = "thi_score"
-        city = st.selectbox(
-            "City",
-            options=city_options,
-            key="sidebar_city",
-            help="Start with the city or market area you want to review.",
+        local_authority = st.selectbox(
+            "Local authority",
+            options=local_authority_options,
+            key="sidebar_local_authority",
+            help="Start with the local authority you want to review.",
         )
         metric_key = st.radio(
             "Opportunity Signal",
@@ -239,7 +243,7 @@ def render_sidebar_controls(
             key="sidebar_metric_key",
             help="Choose the score used to color the filtered map and rank deployment candidates.",
         )
-        territory_options = territories_by_city.get(city, ["All territories"])
+        territory_options = territories_by_local_authority.get(local_authority, ["All territories"])
         if st.session_state.get("sidebar_territory") not in territory_options:
             st.session_state["sidebar_territory"] = "All territories"
         territory = st.selectbox(
@@ -266,11 +270,11 @@ def render_sidebar_controls(
             options=segment_options,
             key="sidebar_segment",
             format_func=lambda option: SEGMENT_OPTION_LABELS.get(segment_mode, {}).get(option, option),
-            help="Filter the city view using the currently selected segment mode.",
+            help="Filter the current local-authority view using the selected segment mode.",
         )
 
     return {
-        "city": city,
+        "local_authority": local_authority,
         "metric_key": metric_key,
         "territory": territory,
         "segment_mode": segment_mode,

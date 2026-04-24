@@ -6,7 +6,7 @@ import streamlit as st
 
 from controllers.filters import apply_filters, get_focus_record
 from models.district_data import build_map_frame, get_filter_options, load_prototype_geo_dataframe
-from models.external_market import build_overview_external_context, load_market_demand_frame
+from models.external_market import build_overview_external_context
 from models.scoring import score_thi
 from models.store_locations import load_hilti_store_locations
 from components.map_component import render_leaflet_metric_map
@@ -24,36 +24,20 @@ from components.shared import (
 )
 
 
-def _render_external_context_panel(visible_stores) -> None:
+def _render_external_context_panel(visible_stores, selected_local_authority: str) -> None:
     store_names = tuple(visible_stores["name"].dropna().astype(str).tolist())
-    demand_frame = load_market_demand_frame()
-    local_authority_options = sorted(demand_frame["area_name"].dropna().astype(str).unique().tolist())
-    default_local_authority = "Birmingham" if "Birmingham" in local_authority_options else local_authority_options[0]
-    stored_local_authority = st.session_state.get("overview_external_local_authority", default_local_authority)
-    if stored_local_authority not in local_authority_options:
-        stored_local_authority = default_local_authority
-
-    selected_local_authority = st.selectbox(
-        "Construction demand local authority",
-        options=local_authority_options,
-        index=local_authority_options.index(stored_local_authority),
-        key="overview_external_local_authority",
-        help="Public demand data is aligned to local authority boundaries, not the overview city/sprawl geography.",
-    )
-
     context = build_overview_external_context(store_names, selected_local_authority)
-    pressure = context["pressure_summary"]
+    pressure = context["authority_pressure_summary"]
     demand = context["demand_summary"]
-    pressure_table = context["pressure_by_store"].head(5).copy()
+    chain_table = context["authority_competitors_by_chain"].head(8).copy()
 
-    closest_text = "N/A" if pressure["closest_km"] is None else f"{pressure['closest_km']:.1f} km"
     st.markdown(
         f"""
         <div class="external-context">
           <div>
             <div class="external-kicker">External pressure</div>
-            <strong>{pressure["branches"]:,} competitor branches within 10 km</strong>
-            <span>{pressure["chains"]:,} chains around {pressure["store"]}; closest overlap {closest_text}.</span>
+            <strong>{pressure["locations"]:,} mapped competitor locations</strong>
+            <span>{pressure["chains"]:,} chains in {pressure["area"]}; largest mapped chain is {pressure["top_competitor"]}.</span>
           </div>
           <div>
             <div class="external-kicker">Construction demand</div>
@@ -67,20 +51,18 @@ def _render_external_context_panel(visible_stores) -> None:
 
     with st.expander("External signal detail", expanded=False):
         st.caption(
-            "External pressure follows the visible Hilti store scope. Construction demand is selected separately at local authority level because the public datasets are published on that geography. These signals do not recalculate the THI score yet."
+            "External pressure is now counted inside the selected local authority. Construction demand uses the same local authority. These signals do not recalculate the THI score yet."
         )
-        if pressure_table.empty:
-            st.info("No mapped competitor branches within 10 km for the current Hilti store scope.")
+        if chain_table.empty:
+            st.info("No mapped competitor locations for the selected local authority.")
         else:
-            display = pressure_table.rename(
+            display = chain_table.rename(
                 columns={
-                    "nearest_hilti_store": "Hilti store",
-                    "competitor_branches_10km": "Competitor branches within 10km",
-                    "competitor_chains_10km": "Competitor chains",
-                    "closest_competitor_km": "Closest competitor km",
+                    "competitor": "Competitor",
+                    "mapped_locations": "Mapped locations",
+                    "direct_threat_locations": "Within 10km of a Hilti store",
                 }
             )
-            display["Closest competitor km"] = display["Closest competitor km"].map(lambda value: f"{value:.1f}")
             st.dataframe(display, width="stretch", hide_index=True)
 
 
@@ -90,29 +72,33 @@ def render_page() -> None:
     store_locations = load_hilti_store_locations()
 
     render_app_frame()
-    city_options = options["sprawls"]
-    default_city = "All" if "All" in city_options else city_options[0]
+    local_authority_options = options["local_authorities"]
+    default_local_authority = "All" if "All" in local_authority_options else local_authority_options[0]
 
-    territories_by_city = {"All": ["All territories"] + sorted(base["PostDist"].dropna().unique().tolist())}
-    for city in [value for value in city_options if value != "All"]:
-        city_scope = base.loc[base["Sprawl"] == city]
-        territories_by_city[city] = ["All territories"] + sorted(city_scope["PostDist"].dropna().unique().tolist())
+    territories_by_local_authority = {
+        "All": ["All territories"] + sorted(base["PostDist"].dropna().unique().tolist())
+    }
+    for local_authority in [value for value in local_authority_options if value != "All"]:
+        authority_scope = base.loc[base["local_authority_name"] == local_authority]
+        territories_by_local_authority[local_authority] = [
+            "All territories"
+        ] + sorted(authority_scope["PostDist"].dropna().unique().tolist())
 
     controls = render_sidebar_controls(
-        city_options,
+        local_authority_options,
         options["segment_modes"],
         options["segments_by_mode"],
-        territories_by_city,
-        default_city,
+        territories_by_local_authority,
+        default_local_authority,
     )
-    st.session_state["executive_city"] = controls["city"]
+    st.session_state["executive_city"] = controls["local_authority"]
     api_base_url = resolve_api_base_url()
 
     thi_controls = render_thi_controls(expanded=False)
     scored = score_thi(base, thi_controls["weights"], thi_controls["active_keys"])
 
     analysis_filters = build_analysis_filters(
-        controls["city"],
+        controls["local_authority"],
         controls["segment"],
         segment_mode=controls["segment_mode"],
     )
@@ -120,12 +106,15 @@ def render_page() -> None:
     scope_frame = apply_filters(scored, analysis_filters)
     geojson_data = None
     if not api_base_url:
-        map_frame = build_map_frame(scope_frame, controls["city"])
+        map_frame = build_map_frame(scope_frame, controls["local_authority"])
         geojson_data = json.dumps(json.loads(map_frame.to_json()))
 
     visible_stores = store_locations
-    if controls["city"] != "All":
-        visible_stores = store_locations.loc[store_locations["city"] == controls["city"]]
+    if controls["local_authority"] != "All" and "local_authority_name" in store_locations.columns:
+        visible_stores = store_locations.loc[
+            (store_locations["local_authority_name"] == controls["local_authority"])
+            | (store_locations["city"] == controls["local_authority"])
+        ]
 
     metric_key = controls["metric_key"]
     metric_meta = METRIC_CONFIG[metric_key]
@@ -138,23 +127,23 @@ def render_page() -> None:
 
     render_metric_cards(
         [
-            ("Geography in scope", controls["city"], "Resource deployment geography"),
+            ("Geography in scope", controls["local_authority"], "Selected local authority"),
             ("Segment slice", segment_label, "Current customer segment filter"),
             ("Average opportunity score", f"{avg_opportunity:.1f}", "THI average inside the selected segment"),
             ("Top deployment candidate", top_territory, f"Highest {metric_meta['short_label'].lower()} signal in scope"),
         ],
         scope_frame=scope_frame
     )
-    _render_external_context_panel(visible_stores)
+    _render_external_context_panel(visible_stores, controls["local_authority"])
     if scope_frame.empty:
-        st.warning("No territories match the current geography and segment slice. Broaden the segment filter or switch city scope.")
+        st.warning("No territories match the current geography and segment slice. Broaden the segment filter or switch local authority scope.")
     st.markdown('<div style="height:0.4rem;"></div>', unsafe_allow_html=True)
 
     searched_territory = controls["territory"] if controls["territory"] != "All territories" else None
     selected_territory = searched_territory
 
     focus_filters = build_analysis_filters(
-        controls["city"],
+        controls["local_authority"],
         controls["segment"],
         district=selected_territory or "All",
         segment_mode=controls["segment_mode"],
@@ -162,7 +151,7 @@ def render_page() -> None:
     focus = get_focus_record(base, focus_filters)
 
     geography_signature = (
-        controls["city"],
+        controls["local_authority"],
         controls["segment_mode"],
         controls["segment"],
         selected_territory or "All",
@@ -178,14 +167,16 @@ def render_page() -> None:
             st.subheader(f"{metric_meta['label']} Map")
             overview_note = (
                 " National overview uses point mode for faster inline loading."
-                if controls["city"] == "All" and not api_base_url
+                if controls["local_authority"] == "All" and not api_base_url
                 else ""
             )
-            st.caption(f"{metric_meta['description']} Browse the full city on the map, or use the sidebar search to jump to a specific territory.{overview_note}")
+            st.caption(
+                f"{metric_meta['description']} Browse the full local authority on the map, or use the sidebar search to jump to a specific territory.{overview_note}"
+            )
             if controls["segment"] != "All":
                 st.caption(
                     f"Cross-filter active: showing {metric_meta['label'].lower()} only for "
-                    f"{controls['segment']} within {controls['city']}."
+                    f"{controls['segment']} within {controls['local_authority']}."
                 )
             map_data_source_caption(api_base_url)
             render_leaflet_metric_map(
