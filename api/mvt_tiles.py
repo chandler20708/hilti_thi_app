@@ -117,6 +117,7 @@ async def district_vector_tile(
     district: Annotated[str, Query()] = "All",
     segment: Annotated[str, Query()] = "All",
     segment_mode: Annotated[str, Query()] = "primary_segment",
+    metric_key: Annotated[str, Query()] = "thi_score",
     active: Annotated[str, Query()] = "",
     w_mps: Annotated[float | None, Query()] = None,
     w_cas: Annotated[float | None, Query()] = None,
@@ -135,6 +136,7 @@ async def district_vector_tile(
             "district": district,
             "segment": segment,
             "segment_mode": segment_mode,
+            "metric_key": metric_key,
             "active": active,
         },
     )
@@ -151,10 +153,14 @@ async def district_vector_tile(
     with profile.stage("query_parse") as stage:
         weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
         active_keys = _parse_active_keys(active)
-        stage.update_meta(weights=weights, active_key_count=len(active_keys))
+        needs_thi = metric_key == "thi_score"
+        stage.update_meta(weights=weights, active_key_count=len(active_keys), metric_key=metric_key, needs_thi=needs_thi)
+    cache_weights = weights if needs_thi else DEFAULT_WEIGHTS
+    cache_active = active if needs_thi else ""
     cache_key = (
-        f"{z}:{x}:{y}:{post_area}:{sprawl}:{district}:{segment}:{segment_mode}:{active}:"
-        f"{weights['mps']:.4f}:{weights['cas']:.4f}:{weights['cps']:.4f}:{weights['gii']:.4f}:{weights['pis']:.4f}"
+        f"{z}:{x}:{y}:{post_area}:{sprawl}:{district}:{segment}:{segment_mode}:{metric_key}:{cache_active}:"
+        f"{cache_weights['mps']:.4f}:{cache_weights['cas']:.4f}:{cache_weights['cps']:.4f}:"
+        f"{cache_weights['gii']:.4f}:{cache_weights['pis']:.4f}"
     )
     with profile.stage("mvt_cache_lookup") as stage:
         hit = _mvt_cache_get(cache_key)
@@ -179,6 +185,7 @@ async def district_vector_tile(
         district,
         segment,
         segment_mode,
+        metric_key,
         active_keys,
         weights,
         profile,
@@ -202,13 +209,25 @@ def _build_tile_body(
     district: str,
     segment: str,
     segment_mode: str,
+    metric_key: str,
     active_keys: list[str],
     weights: dict[str, float],
     profile: RequestProfile | None = None,
 ) -> bytes:
     profile = profile or RequestProfile("/tiles-build", enabled=False)
     base = get_mvt_base()
-    scored = get_scored_geo_dataframe(base, weights, active_keys, profile=profile)
+    needs_thi = metric_key == "thi_score"
+    if needs_thi:
+        scored = get_scored_geo_dataframe(base, weights, active_keys, profile=profile)
+    else:
+        scored = base
+        profile.cache("scoring_cache", "skipped")
+        profile.add_stage(
+            "scoring",
+            rows_before=len(base),
+            rows_after=len(base),
+            meta={"skipped": True, "reason": "metric_does_not_need_thi", "metric_key": metric_key},
+        )
     with profile.stage("filtering", rows_before=len(scored)) as stage:
         filtered = apply_filters(
             scored,

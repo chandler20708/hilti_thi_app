@@ -382,6 +382,7 @@ def render_leaflet_metric_map(
           params.set("east", bounds.getEast().toFixed(6));
           params.set("north", bounds.getNorth().toFixed(6));
           params.set("zoom", String(z));
+          params.set("metric_key", state.metric_key || "thi_score");
 
           if (state.post_area && state.post_area !== "All") params.set("post_area", state.post_area);
           if (state.sprawl && state.sprawl !== "All") params.set("sprawl", state.sprawl);
@@ -389,10 +390,11 @@ def render_leaflet_metric_map(
           if (state.segment && state.segment !== "All") params.set("segment", state.segment);
           if (state.segment_mode && state.segment_mode !== "primary_segment") params.set("segment_mode", state.segment_mode);
 
-          if (state.active_keys && state.active_keys.length) {{
+          const needsThi = state.metric_key === "thi_score";
+          if (needsThi && state.active_keys && state.active_keys.length) {{
             params.set("active", state.active_keys.join(","));
           }}
-          if (state.weights) {{
+          if (needsThi && state.weights) {{
             Object.entries(state.weights).forEach(([key, value]) => {{
               params.set(`w_${{key}}`, String(value));
             }});
@@ -401,8 +403,6 @@ def render_leaflet_metric_map(
         }}
 
         function chunkGridForZoom(z) {{
-          if (z <= 4) return {{ cols: 3, rows: 2 }};
-          if (z <= 7) return {{ cols: 2, rows: 2 }};
           return {{ cols: 1, rows: 1 }};
         }}
 

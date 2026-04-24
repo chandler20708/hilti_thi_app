@@ -64,7 +64,13 @@ def health() -> dict[str, str]:
 
 
 def _districts_cache_key(request: Request) -> str:
-    pairs = sorted(request.query_params.multi_items())
+    metric_key = request.query_params.get("metric_key", "thi_score")
+    pairs = [
+        (key, value)
+        for key, value in request.query_params.multi_items()
+        if metric_key == "thi_score" or (key != "active" and not key.startswith("w_"))
+    ]
+    pairs = sorted(pairs)
     return urlencode(pairs)
 
 
@@ -81,6 +87,7 @@ async def districts(
     district: Annotated[str, Query()] = "All",
     segment: Annotated[str, Query()] = "All",
     segment_mode: Annotated[str, Query()] = "primary_segment",
+    metric_key: Annotated[str, Query()] = "thi_score",
     active: Annotated[str, Query()] = "",
     w_mps: Annotated[float | None, Query()] = None,
     w_cas: Annotated[float | None, Query()] = None,
@@ -98,6 +105,7 @@ async def districts(
             "district": district,
             "segment": segment,
             "segment_mode": segment_mode,
+            "metric_key": metric_key,
             "active": active,
         },
     )
@@ -126,6 +134,7 @@ async def districts(
         district,
         segment,
         segment_mode,
+        metric_key,
         active,
         w_mps,
         w_cas,
@@ -152,6 +161,7 @@ def _build_districts_body(
     district: str,
     segment: str,
     segment_mode: str,
+    metric_key: str,
     active: str,
     w_mps: float | None,
     w_cas: float | None,
@@ -164,16 +174,30 @@ def _build_districts_body(
     with profile.stage("query_parse", rows_before=len(gdf), rows_after_default=len(gdf)) as stage:
         weights = _parse_weights(w_mps, w_cas, w_cps, w_gii, w_pis)
         active_keys = _parse_active_keys(active)
-        stage.update_meta(active_key_count=len(active_keys), weights=weights)
-    scored = get_scored_geo_dataframe(gdf, weights, active_keys, profile=profile)
+        needs_thi = metric_key == "thi_score"
+        stage.update_meta(active_key_count=len(active_keys), weights=weights, metric_key=metric_key, needs_thi=needs_thi)
+    if needs_thi:
+        scored = get_scored_geo_dataframe(gdf, weights, active_keys, profile=profile)
+    else:
+        scored = gdf
+        profile.cache("scoring_cache", "skipped")
+        profile.add_stage(
+            "scoring",
+            rows_before=len(gdf),
+            rows_after=len(gdf),
+            meta={"skipped": True, "reason": "metric_does_not_need_thi", "metric_key": metric_key},
+        )
     filters = {
         "post_area": post_area,
         "sprawl": sprawl,
         "district": district,
         "segment": segment,
         "segment_mode": segment_mode,
+        "_needs_thi": needs_thi,
     }
-    filtered = get_filtered_geo_dataframe(scored, filters, weights, active_keys, profile=profile)
+    filter_weights = weights if needs_thi else DEFAULT_WEIGHTS
+    filter_active_keys = active_keys if needs_thi else [factor.key for factor in factor_catalog()]
+    filtered = get_filtered_geo_dataframe(scored, filters, filter_weights, filter_active_keys, profile=profile)
     viewport = _apply_bbox(filtered, west, south, east, north, zoom, profile=profile)
     map_frame = build_api_map_frame(viewport, zoom, profile=profile)
     profile.set_summary(result_rows=len(map_frame))

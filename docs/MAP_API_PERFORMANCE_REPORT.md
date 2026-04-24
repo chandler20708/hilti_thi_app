@@ -106,3 +106,24 @@ Interaction-pattern checks:
 - Consider a small scoring-cache LRU only if memory headroom is confirmed on Render-like hosts
 - Only add filtered-frame caching to `/tiles` if real multi-tile traces show filter cost accumulating enough to matter
 - Do not spend more time on `intersects` or runtime simplify unless new measurements show a different workload shape
+
+## 2026-04-25 Render Free-Tier Follow-Up
+
+Render free instances are CPU- and memory-constrained enough that the safest optimisation is to reduce repeated work, not add heavier dynamic geospatial processing.
+
+Additional changes:
+
+- Leaflet API mode now sends one `/districts` request per viewport instead of splitting low-zoom views into 4-6 sequential sub-requests. The API already uses point overview geometry and gzip, so the split mostly multiplied request overhead and serialization work.
+- The client now sends THI weights only when the active map metric is `thi_score`.
+- `/districts` and `/tiles` now accept `metric_key`; non-THI metrics skip THI scoring and use cache keys that ignore irrelevant THI weights.
+
+Latest local profiler check after the change:
+
+| Request | Miss ms | Repeat ms | Main remaining cost |
+| --- | ---: | ---: | --- |
+| `/districts` national low zoom, THI | 76.4 | 0.05 | GeoJSON serialization |
+| `/districts` London, THI | 16.8 | 0.05 | GeoJSON serialization |
+| `/districts` local, THI | 4.0 | 0.04 | filtering / geometry prep |
+| `/tiles` London z11, THI | 63.1 | 0.05 | geometry prep, CRS transform, MVT encode |
+
+Conclusion: keep `HILTI_USE_VECTOR_TILES=0` on the free Render service unless production traces prove otherwise. Vector tiles are excellent when pre-generated or served from a tile cache, but dynamic MVT generation is still a heavier cache-miss path than `/districts` for this small prototype dataset.

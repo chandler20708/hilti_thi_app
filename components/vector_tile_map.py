@@ -11,6 +11,7 @@ import streamlit.components.v1 as components
 
 
 def _tile_query_string(
+    metric_key: str,
     filters: dict[str, object] | None,
     weights: dict[str, float] | None,
     active_keys: list[str] | None,
@@ -24,10 +25,12 @@ def _tile_query_string(
         ("district", str(f.get("district", "All"))),
         ("segment", str(f.get("segment", "All"))),
         ("segment_mode", str(f.get("segment_mode", "primary_segment"))),
-        ("active", ",".join(active)),
+        ("metric_key", metric_key),
     ]
-    for key, val in w.items():
-        pairs.append((f"w_{key}", str(float(val))))
+    if metric_key == "thi_score":
+        pairs.append(("active", ",".join(active)))
+        for key, val in w.items():
+            pairs.append((f"w_{key}", str(float(val))))
     return urlencode(pairs)
 
 
@@ -53,7 +56,7 @@ def render_vector_tile_map(
         "focus_district": focus_district or "",
         "store_locations": store_locations or [],
     }
-    tile_qs = _tile_query_string(filters, weights, active_keys)
+    tile_qs = _tile_query_string(metric_key, filters, weights, active_keys)
     focus = focus_record
 
     map_html = f"""
