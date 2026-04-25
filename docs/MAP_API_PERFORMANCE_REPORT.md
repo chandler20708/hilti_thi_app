@@ -116,14 +116,34 @@ Additional changes:
 - Leaflet API mode now sends one `/districts` request per viewport instead of splitting low-zoom views into 4-6 sequential sub-requests. The API already uses point overview geometry and gzip, so the split mostly multiplied request overhead and serialization work.
 - The client now sends THI weights only when the active map metric is `thi_score`.
 - `/districts` and `/tiles` now accept `metric_key`; non-THI metrics skip THI scoring and use cache keys that ignore irrelevant THI weights.
+- GeoJSON serialization now uses dtype-aware value conversion instead of running generic null checks on every property value.
+- Low-zoom point overview responses round point coordinates to six decimals and omit redundant `center_lat` / `center_lon` properties.
 
-Latest local profiler check after the change:
+Query-optimizer ideas reviewed against this app:
 
-| Request | Miss ms | Repeat ms | Main remaining cost |
-| --- | ---: | ---: | --- |
-| `/districts` national low zoom, THI | 76.4 | 0.05 | GeoJSON serialization |
-| `/districts` London, THI | 16.8 | 0.05 | GeoJSON serialization |
-| `/districts` local, THI | 4.0 | 0.04 | filtering / geometry prep |
-| `/tiles` London z11, THI | 63.1 | 0.05 | geometry prep, CRS transform, MVT encode |
+- Predicate pushdown: not added at dataset scan time because the app intentionally keeps national coverage resident for interactive filters. Request-time filtering and bbox spatial-index filtering already push predicates before geometry serialization.
+- Projection pushdown: applied to the Parquet geometry load, observed Excel metrics load, and local-authority CSV load. The runtime district frame is also trimmed to columns used by the app/API.
+- Slice pushdown: applied where the UI needs only top-N districts, using partial selection instead of fully sorting the frame. It is not used for map features because the viewport must return every visible district.
+- Common subplan elimination: already handled through cached base data, scoring results, filtered frames, API responses, and tile bytes.
+- Simplify expressions: removed unused THI component columns and avoids THI scoring entirely when a non-THI map metric is selected.
+- Join ordering: not changed; the app uses two small left joins on `PostDist`, so reordering is not a meaningful memory or CPU lever.
+- Type coercion: low-cardinality label columns are stored as pandas categoricals after enrichment, reducing repeated string memory.
+- Cardinality estimation: no custom group-by planner added. The dataset is small enough that planner complexity would add risk; categorical groupby checks use `observed=True` where relevant.
+
+Latest local checks after the optimizer pass:
+
+| Check | Result |
+| --- | --- |
+| Runtime district frame | 2,736 rows x 26 columns |
+| Runtime district frame deep pandas memory | 0.749 MB |
+| Scored district frame deep pandas memory | 0.791 MB |
+| Scored district frame component columns | none |
+| `/districts` national low zoom payload | 1,286,552 bytes |
+| `/districts` London payload | 189,680 bytes |
+| `/districts` local payload | 5,828 bytes |
+| `/tiles` London z11 payload | 8,391 bytes |
+| Repeat requests | response/tile cache hits; sub-millisecond handler work in normal local runs |
+
+Exact local wall-clock timings vary heavily under desktop CPU contention, so response size, cache behavior, and stage dominance are more stable than a single millisecond number. The repeated finding is unchanged: `/districts` cache misses are serialization-heavy, while dynamic `/tiles` cache misses remain geometry/CRS/encode-heavy.
 
 Conclusion: keep `HILTI_USE_VECTOR_TILES=0` on the free Render service unless production traces prove otherwise. Vector tiles are excellent when pre-generated or served from a tile cache, but dynamic MVT generation is still a heavier cache-miss path than `/districts` for this small prototype dataset.

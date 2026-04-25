@@ -387,7 +387,7 @@ def render_metric_cards(metric_payload, scope_frame=None) -> None:
                     _render_mini_distribution(values)
 
 def render_top_territories_snapshot(df, metric_key: str, segment_mode: str = "primary_segment") -> None:
-    ranking = df.sort_values(metric_key, ascending=False).head(5).copy()
+    ranking = df.nlargest(5, metric_key).copy()
     if ranking.empty:
         st.info("No deployment candidates match the current cross-filter.")
         return
@@ -518,7 +518,7 @@ def render_methodology_notes() -> None:
 
 
 def render_ranking_bar(df, metric_key: str, title: str) -> None:
-    ranking = df.sort_values(metric_key, ascending=False).head(15)
+    ranking = df.nlargest(15, metric_key)
     fig = px.bar(
         ranking,
         x="PostDist",

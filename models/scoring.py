@@ -87,7 +87,6 @@ def score_thi(gdf: gpd.GeoDataFrame, weights: dict[str, float], active_keys: lis
 
     for factor in chosen:
         component = _normalize(scored[factor.column], factor.higher_is_better)
-        scored[f"{factor.key}_component"] = component
         valid_any = valid_any | component.notna()
         scored["thi_score"] = scored["thi_score"] + component.fillna(0.0) * normalized_weights[factor.key]
 
@@ -108,7 +107,7 @@ def summarize_metric(gdf: pd.DataFrame, metric_key: str) -> dict[str, object]:
             "top_value": None,
         }
 
-    top_row = valid.sort_values(metric_key, ascending=False).iloc[0]
+    top_row = valid.nlargest(1, metric_key).iloc[0]
     return {
         "count": int(valid["PostDist"].nunique()),
         "mean_value": float(valid[metric_key].mean()),

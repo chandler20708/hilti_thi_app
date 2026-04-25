@@ -58,6 +58,52 @@ SEGMENT_MODE_LABELS = {
     "activity_class": "Activity Class",
 }
 LOCAL_AUTHORITY_LOOKUP_PATH = APP_ROOT / "data" / "postcode_district_local_authority_lookup.csv"
+DISTRICT_SCAN_COLUMNS = [
+    "PostDist",
+    "PostArea",
+    "Sprawl",
+    "geometry",
+    GEOM_MAP_LOW,
+    GEOM_MAP_MID,
+]
+RUNTIME_BASE_COLUMNS = [
+    "PostDist",
+    "PostArea",
+    "Sprawl",
+    "local_authority_code",
+    "local_authority_name",
+    "primary_segment",
+    "size_class",
+    "activity_class",
+    "data_source",
+    "center_lat",
+    "center_lon",
+    "market_opportunity_score",
+    "acquisition_opportunity",
+    "retention_risk",
+    "retention_health",
+    "competition_pressure",
+    "existing_accounts",
+    "lead_volume",
+    "mps",
+    "cas",
+    "cps",
+    "gii",
+    "pis",
+    "geometry",
+    GEOM_MAP_LOW,
+    GEOM_MAP_MID,
+]
+LOW_CARDINALITY_COLUMNS = [
+    "PostArea",
+    "Sprawl",
+    "local_authority_code",
+    "local_authority_name",
+    "primary_segment",
+    "size_class",
+    "activity_class",
+    "data_source",
+]
 
 
 def _percentile_skew(series: pd.Series, exponent: float = 2.35) -> pd.Series:
@@ -128,7 +174,10 @@ def load_observed_metrics() -> pd.DataFrame:
         raise FileNotFoundError(
             f"Dataset not found at {DATASET_PATH}. Set HILTI_DATASET_PATH or place dataset2.xlsx in the project root."
         )
-    df = pd.read_excel(DATASET_PATH)
+    df = pd.read_excel(
+        DATASET_PATH,
+        usecols=["Postal District", "Territory count", "Area (sq mi)", "ratio"],
+    )
     df["Postal District"] = df["Postal District"].astype(str).str.upper().str.strip()
     return df
 
@@ -139,9 +188,32 @@ def load_district_local_authority_lookup() -> pd.DataFrame:
         raise FileNotFoundError(
             f"District-to-local-authority lookup not found at {LOCAL_AUTHORITY_LOOKUP_PATH}."
         )
-    lookup = pd.read_csv(LOCAL_AUTHORITY_LOOKUP_PATH)
+    lookup = pd.read_csv(
+        LOCAL_AUTHORITY_LOOKUP_PATH,
+        usecols=["PostDist", "local_authority_code", "local_authority_name"],
+    )
     lookup["PostDist"] = lookup["PostDist"].astype(str).str.upper().str.strip()
     return lookup
+
+
+def _read_district_geometry() -> gpd.GeoDataFrame:
+    if DISTRICT_DATA_PATH.suffix.lower() == ".parquet":
+        import pyarrow.parquet as pq
+
+        schema_names = set(pq.ParquetFile(DISTRICT_DATA_PATH).schema.names)
+        columns = [column for column in DISTRICT_SCAN_COLUMNS if column in schema_names]
+        return gpd.read_parquet(DISTRICT_DATA_PATH, columns=columns)
+
+    return gpd.read_file(DISTRICT_DATA_PATH)
+
+
+def _trim_runtime_columns(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    columns = [column for column in RUNTIME_BASE_COLUMNS if column in gdf.columns]
+    trimmed = gpd.GeoDataFrame(gdf.loc[:, columns].copy(), geometry="geometry", crs=gdf.crs)
+    for column in LOW_CARDINALITY_COLUMNS:
+        if column in trimmed.columns:
+            trimmed[column] = trimmed[column].astype("category")
+    return trimmed
 
 
 @lru_cache(maxsize=1)
@@ -151,10 +223,7 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
             f"District geometry not found at {DISTRICT_DATA_PATH}. Place UK_postcode_districts.parquet in the data folder, or set HILTI_DISTRICT_PATH."
         )
     try:
-        if DISTRICT_DATA_PATH.suffix.lower() == ".parquet":
-            geo = gpd.read_parquet(DISTRICT_DATA_PATH)
-        else:
-            geo = gpd.read_file(DISTRICT_DATA_PATH)
+        geo = _read_district_geometry()
         geo = geo.set_crs(4326) if geo.crs is None else geo.to_crs(4326)
     except (ImportError, ModuleNotFoundError) as error:
         raise RuntimeError(
@@ -200,9 +269,8 @@ def load_prototype_geo_dataframe() -> gpd.GeoDataFrame:
     points = merged.geometry.representative_point()
     merged["center_lat"] = points.y
     merged["center_lon"] = points.x
-    merged["label"] = merged["PostDist"].fillna("Unknown")
 
-    return gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:4326")
+    return _trim_runtime_columns(gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:4326"))
 
 
 def get_filter_options(gdf: gpd.GeoDataFrame) -> dict[str, list[str]]:
@@ -308,6 +376,7 @@ def build_api_map_frame(
                 gdf.loc[frame.index, "center_lat"],
                 crs="EPSG:4326",
             )
+        frame = frame.drop(columns=["center_lat", "center_lon"], errors="ignore")
         geometry_source = "precomputed_center_point"
     else:
         if profile is not None:

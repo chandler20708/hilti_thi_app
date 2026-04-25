@@ -118,7 +118,7 @@ def render_page() -> None:
 
     metric_key = controls["metric_key"]
     metric_meta = METRIC_CONFIG[metric_key]
-    top_priority = scope_frame.sort_values(metric_key, ascending=False).head(1)
+    top_priority = scope_frame.nlargest(1, metric_key)
     top_territory = top_priority.iloc[0]["PostDist"] if not top_priority.empty else "N/A"
     avg_opportunity = float(scope_frame["thi_score"].mean()) if not scope_frame.empty else 0.0
     avg_growth = float(scope_frame["market_opportunity_score"].mean()) if not scope_frame.empty else 0.0

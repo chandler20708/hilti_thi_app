@@ -67,7 +67,7 @@ def _choose_cases() -> list[Case]:
 
     city_counts = (
         gdf.loc[gdf["Sprawl"].notna() & (gdf["Sprawl"] != "All")]
-        .groupby("Sprawl")
+        .groupby("Sprawl", observed=True)
         .size()
         .sort_values(ascending=False)
     )
