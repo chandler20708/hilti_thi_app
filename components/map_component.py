@@ -197,6 +197,7 @@ def render_leaflet_metric_map(
           state.segment || "All"
         ].join("_");
         const defaultBounds = [[49.8, -8.2], [60.9, 2.2]];
+        const defaultPrewarmZoom = 5;
         const segmentModeLabels = {{
           primary_segment: "Primary Segment",
           size_class: "Size Class",
@@ -508,6 +509,7 @@ def render_leaflet_metric_map(
         let apiRequestToken = 0;
         let apiAbort = null;
         let refreshDebounce = null;
+        let defaultFirstLoadPending = false;
 
         function scheduleRefreshFromApi() {{
           if (!apiBaseUrl) return;
@@ -565,17 +567,25 @@ def render_leaflet_metric_map(
             loadingEl.textContent = (fromRefresh ? "Refreshed " : "Loaded ") + count + " " + mode;
         }}
 
-        async function refreshFromApi() {{
+        async function refreshFromApi(options = {{}}) {{
           if (!apiBaseUrl) return;
+          if (refreshDebounce) {{
+            clearTimeout(refreshDebounce);
+            refreshDebounce = null;
+          }}
           if (apiAbort) apiAbort.abort();
           apiAbort = new AbortController();
           const signal = apiAbort.signal;
           apiRequestToken += 1;
           const myToken = apiRequestToken;
 
-          const bounds = map.getBounds();
-          const zoom = map.getZoom();
-          const fullKey = buildQueryFromBounds(bounds, zoom);
+          const viewBounds = map.getBounds();
+          const viewZoom = map.getZoom();
+          const useDefaultRequest = Boolean(options.defaultBounds || defaultFirstLoadPending);
+          defaultFirstLoadPending = false;
+          const requestBounds = useDefaultRequest ? L.latLngBounds(defaultBounds) : viewBounds;
+          const requestZoom = useDefaultRequest ? defaultPrewarmZoom : viewZoom;
+          const fullKey = buildQueryFromBounds(requestBounds, requestZoom);
 
           try {{
             const cached = getCachedResponse(fullKey);
@@ -584,25 +594,25 @@ def render_leaflet_metric_map(
               return;
             }}
 
-            const grid = chunkGridForZoom(zoom);
+            const grid = chunkGridForZoom(requestZoom);
             if (grid.cols === 1 && grid.rows === 1) {{
               loadingEl.textContent = "Loading map data…";
               const response = await fetch(fullKey, {{ signal }});
               if (!response.ok) throw new Error("HTTP " + response.status);
               const payload = await response.json();
               if (myToken !== apiRequestToken) return;
-              setCachedResponse(fullKey, payload, bounds, zoom);
+              setCachedResponse(fullKey, payload, requestBounds, requestZoom);
               paint(payload, false);
               return;
             }}
 
-            const tiles = chunkTileBounds(bounds, grid.cols, grid.rows);
+            const tiles = chunkTileBounds(requestBounds, grid.cols, grid.rows);
             const merged = {{ type: "FeatureCollection", features: [] }};
             const seen = new Set();
             for (let i = 0; i < tiles.length; i++) {{
               if (myToken !== apiRequestToken) return;
               loadingEl.textContent = `Loading map data… (${{i + 1}}/${{tiles.length}})`;
-              const url = buildQueryFromBounds(tiles[i], zoom);
+              const url = buildQueryFromBounds(tiles[i], requestZoom);
               const response = await fetch(url, {{ signal }});
               if (!response.ok) throw new Error("HTTP " + response.status);
               const part = await response.json();
@@ -614,7 +624,7 @@ def render_leaflet_metric_map(
               }}
             }}
             if (myToken !== apiRequestToken) return;
-            setCachedResponse(fullKey, merged, bounds, zoom);
+            setCachedResponse(fullKey, merged, requestBounds, requestZoom);
             paint(merged, false);
           }} catch (error) {{
             if (error.name === "AbortError") return;
@@ -656,7 +666,7 @@ def render_leaflet_metric_map(
           map.fitBounds(targetBounds, {{ padding: [16, 16], animate: false }});
           saveViewState();
           if (apiBaseUrl) {{
-            refreshFromApi();
+            refreshFromApi({{ defaultBounds: !(focus && focus.bounds) }});
           }} else {{
             paint(geojson, true);
           }}
@@ -699,6 +709,7 @@ def render_leaflet_metric_map(
         }} else if (!restored && !focus) {{
           map.fitBounds(defaultBounds, {{padding: [16,16], animate: false}});
           saveViewState();
+          defaultFirstLoadPending = true;
         }}
 
         if (apiBaseUrl) {{

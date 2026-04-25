@@ -118,6 +118,7 @@ Additional changes:
 - `/districts` and `/tiles` now accept `metric_key`; non-THI metrics skip THI scoring and use cache keys that ignore irrelevant THI weights.
 - GeoJSON serialization now uses dtype-aware value conversion instead of running generic null checks on every property value.
 - Low-zoom point overview responses round point coordinates to six decimals and omit redundant `center_lat` / `center_lon` properties.
+- The API now precomputes and pins the default national low-zoom `/districts` response at startup. The Leaflet client uses the same fixed national bbox for its first unfiltered API request, making the first map load hit that prewarmed body instead of doing scoring and serialization on demand.
 
 Query-optimizer ideas reviewed against this app:
 
@@ -143,6 +144,7 @@ Latest local checks after the optimizer pass:
 | `/districts` local payload | 5,828 bytes |
 | `/tiles` London z11 payload | 8,391 bytes |
 | Repeat requests | response/tile cache hits; sub-millisecond handler work in normal local runs |
+| Default national prewarm | 1 pinned response body, 1,286,552 bytes |
 
 Exact local wall-clock timings vary heavily under desktop CPU contention, so response size, cache behavior, and stage dominance are more stable than a single millisecond number. The repeated finding is unchanged: `/districts` cache misses are serialization-heavy, while dynamic `/tiles` cache misses remain geometry/CRS/encode-heavy.
 

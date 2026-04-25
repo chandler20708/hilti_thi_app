@@ -31,6 +31,10 @@ _DISTRICTS_CACHE = BytesTTLCache(
     ttl_seconds=env_float("HILTI_DISTRICTS_CACHE_TTL_SECONDS", 90.0),
     max_entry_bytes=env_int("HILTI_DISTRICTS_CACHE_MAX_ENTRY_BYTES", 1_500_000),
 )
+_PREWARM_DEFAULT_MAP = env_int("HILTI_PREWARM_DEFAULT_MAP", 1) != 0
+_DEFAULT_MAP_BOUNDS = (-8.2, 49.8, 2.2, 60.9)
+_DEFAULT_MAP_ZOOM = env_int("HILTI_DEFAULT_MAP_PREWARM_ZOOM", 5)
+_PREWARMED_DISTRICTS: dict[str, bytes] = {}
 
 
 def _allowed_origins() -> list[str]:
@@ -56,6 +60,8 @@ def _load_base_dataframe() -> None:
     app.state.base_gdf = load_prototype_geo_dataframe()
     _ = app.state.base_gdf.sindex
     set_mvt_base(app.state.base_gdf)
+    if _PREWARM_DEFAULT_MAP:
+        _prewarm_default_districts(app.state.base_gdf)
 
 
 @app.get("/health")
@@ -70,8 +76,59 @@ def _districts_cache_key(request: Request) -> str:
         for key, value in request.query_params.multi_items()
         if metric_key == "thi_score" or (key != "active" and not key.startswith("w_"))
     ]
-    pairs = sorted(pairs)
-    return urlencode(pairs)
+    return _districts_cache_key_from_pairs(pairs)
+
+
+def _districts_cache_key_from_pairs(pairs: list[tuple[str, object]]) -> str:
+    return urlencode(sorted((key, str(value)) for key, value in pairs))
+
+
+def _default_districts_query_pairs() -> list[tuple[str, object]]:
+    active_keys = [factor.key for factor in factor_catalog()]
+    pairs: list[tuple[str, object]] = [
+        ("west", f"{_DEFAULT_MAP_BOUNDS[0]:.6f}"),
+        ("south", f"{_DEFAULT_MAP_BOUNDS[1]:.6f}"),
+        ("east", f"{_DEFAULT_MAP_BOUNDS[2]:.6f}"),
+        ("north", f"{_DEFAULT_MAP_BOUNDS[3]:.6f}"),
+        ("zoom", str(_DEFAULT_MAP_ZOOM)),
+        ("metric_key", "thi_score"),
+        ("active", ",".join(active_keys)),
+    ]
+    pairs.extend((f"w_{key}", str(DEFAULT_WEIGHTS[key])) for key in active_keys)
+    return pairs
+
+
+def _prewarm_default_districts(gdf: gpd.GeoDataFrame) -> None:
+    cache_key = _districts_cache_key_from_pairs(_default_districts_query_pairs())
+    if cache_key in _PREWARMED_DISTRICTS:
+        return
+    west, south, east, north = _DEFAULT_MAP_BOUNDS
+    active = ",".join(factor.key for factor in factor_catalog())
+    body = _build_districts_body(
+        gdf,
+        west,
+        south,
+        east,
+        north,
+        _DEFAULT_MAP_ZOOM,
+        "All",
+        "All",
+        "All",
+        "All",
+        "primary_segment",
+        "thi_score",
+        active,
+        DEFAULT_WEIGHTS["mps"],
+        DEFAULT_WEIGHTS["cas"],
+        DEFAULT_WEIGHTS["cps"],
+        DEFAULT_WEIGHTS["gii"],
+        DEFAULT_WEIGHTS["pis"],
+        RequestProfile("/districts-prewarm", enabled=False),
+    )
+    _PREWARMED_DISTRICTS[cache_key] = body
+    _DISTRICTS_CACHE.set(cache_key, body)
+    app.state.default_districts_cache_key = cache_key
+    app.state.default_districts_response_bytes = len(body)
 
 
 @app.get("/districts")
@@ -118,6 +175,13 @@ async def districts(
         profile.set_summary(cache_hit=True)
         profile.finish(response_bytes=len(cached))
         return _districts_response(cached)
+    prewarmed = _PREWARMED_DISTRICTS.get(cache_key)
+    if prewarmed is not None:
+        _DISTRICTS_CACHE.set(cache_key, prewarmed)
+        profile.cache("districts_cache", "hit", bytes=len(prewarmed), source="prewarmed_default")
+        profile.set_summary(cache_hit=True, prewarmed_default=True)
+        profile.finish(response_bytes=len(prewarmed))
+        return _districts_response(prewarmed)
     profile.cache("districts_cache", "miss")
 
     gdf: gpd.GeoDataFrame = app.state.base_gdf

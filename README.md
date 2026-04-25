@@ -165,8 +165,11 @@ The FastAPI service now uses:
 - short-lived **query/tile caches** in-process
 - **CDN-friendly cache headers** on `/districts` and `/tiles`
 - one cached **scored national frame** per process so repeated pans do not rerun THI on every request
+- startup prewarming for the default national `/districts` map response, so the first unfiltered map load can hit an already-built body
 
 When `API_BASE_URL` is set, the Streamlit map keeps **Leaflet + `/districts`** as the primary path for constrained hosts. **MapLibre GL** vector tiles from `GET /tiles/{z}/{x}/{y}.mvt` remain optional and experimental; set `HILTI_USE_VECTOR_TILES=1` only if you explicitly want to test them.
+
+**Default map prewarm:** enabled by default on the FastAPI service. Set `HILTI_PREWARM_DEFAULT_MAP=0` to disable it, or `HILTI_DEFAULT_MAP_PREWARM_ZOOM=5` to change the prewarmed overview zoom. The client uses the same fixed national bounds for the first unfiltered API request so the prewarm cache key is deterministic.
 
 **Pre-simplified map geometries (recommended on 512MB):** run once from the app root after installing dependencies:
 
