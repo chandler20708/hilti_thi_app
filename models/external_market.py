@@ -13,6 +13,10 @@ from config import APP_ROOT
 EXTERNAL_DATA_DIR = APP_ROOT / "data"
 
 
+def _display_store_name(value: object) -> str:
+    return str(value).replace("Hilti Store ", "Construction Hub ")
+
+
 def _data_path(filename: str) -> Path:
     return EXTERNAL_DATA_DIR / filename
 
@@ -44,6 +48,8 @@ def load_competitor_store_locations() -> pd.DataFrame:
         merged["distance_to_nearest_hilti_km"],
         errors="coerce",
     )
+    if "nearest_hilti_store" in merged.columns:
+        merged["nearest_hilti_store"] = merged["nearest_hilti_store"].map(_display_store_name)
     local_authority_path = _data_path("competitor_store_local_authority_lookup.csv")
     if local_authority_path.exists():
         lookup = pd.read_csv(local_authority_path).loc[
@@ -94,6 +100,8 @@ def load_power_tool_authorised_locations() -> pd.DataFrame:
         locations["distance_to_nearest_hilti_km"],
         errors="coerce",
     )
+    if "nearest_hilti_store" in locations.columns:
+        locations["nearest_hilti_store"] = locations["nearest_hilti_store"].map(_display_store_name)
     return locations
 
 

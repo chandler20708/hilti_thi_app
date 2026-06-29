@@ -157,7 +157,7 @@ def render_leaflet_metric_map(
           border: 1px solid rgba(16,24,40,0.22);
           flex: 0 0 auto;
         }}
-        .hilti-store-icon {{
+        .construction-store-icon {{
           width: 22px;
           height: 22px;
           border-radius: 999px;
@@ -191,7 +191,7 @@ def render_leaflet_metric_map(
         const recenterBtn = document.getElementById("recenterBtn");
         const responseCache = new Map();
         const responseCacheMaxEntries = 12;
-        const storageKey = "hilti_market_map_state_" + [
+        const storageKey = "construction_market_map_state_" + [
           state.metric_key,
           state.segment_mode || "primary_segment",
           state.segment || "All"
@@ -271,7 +271,7 @@ def render_leaflet_metric_map(
         const storeLayer = L.layerGroup().addTo(map);
         const storeIcon = L.divIcon({{
           className: "",
-          html: '<div class="hilti-store-icon">H</div>',
+          html: '<div class="construction-store-icon">C</div>',
           iconSize: [22, 22],
           iconAnchor: [11, 22],
           popupAnchor: [0, -20],

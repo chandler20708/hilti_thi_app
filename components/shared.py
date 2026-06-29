@@ -197,8 +197,8 @@ def map_data_source_caption(api_base_url: str) -> None:
 
 
 def render_app_frame(
-    title: str = "Hilti Territory Growth Dashboard",
-    subtitle: str = "Choose a city, review the map, and focus the sales team on the territories with the strongest executive case for action.",
+    title: str = "Construction Territory Growth Dashboard",
+    subtitle: str = "Choose a city, review the map, and focus the sales team on the territories with the strongest case for action.",
 ) -> None:
     st.markdown(
         f"""
@@ -485,7 +485,7 @@ def render_methodology_notes() -> None:
     with st.container(border=True):
         st.subheader("How To Read This Dashboard")
         st.write(
-            "This executive view is designed to help Hilti managers find the territories with the strongest growth case inside a selected city. The map is the primary decision surface, while the top-5 ranking is only a reference summary and advanced scoring stays collapsed unless an expert wants to explain the model."
+            "This executive view is designed to help managers find the territories with the strongest growth case inside a selected city. The map is the primary decision surface, while the top-5 ranking is only a reference summary and advanced scoring stays collapsed unless an expert wants to explain the model."
         )
         st.write(
             "The current data layer mixes observed workbook fields with synthetic augmentation to provide full territory coverage for prototype demonstrations. The deployable runtime bundle is packaged in the app-local data folder. Both details are intentionally kept out of the main dashboard flow and should be discussed as methodology, not as the first thing a manager sees."

@@ -60,7 +60,7 @@ def _render_external_context_panel(visible_stores, selected_local_authority: str
                 columns={
                     "competitor": "Competitor",
                     "mapped_locations": "Mapped locations",
-                    "direct_threat_locations": "Within 10km of a Hilti store",
+                    "direct_threat_locations": "Within 10km of a construction hub",
                 }
             )
             st.dataframe(display, width="stretch", hide_index=True)

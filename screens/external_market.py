@@ -71,6 +71,15 @@ ANALYSIS_MODES = [
 ]
 
 
+def _display_name(value: object) -> str:
+    text = str(value)
+    return text.replace("Hilti Store ", "Construction Hub ")
+
+
+def _display_all_hubs_label() -> str:
+    return "All construction hubs"
+
+
 def _render_mode_selector() -> str:
     with st.sidebar:
         st.markdown("### Evidence View")
@@ -87,14 +96,15 @@ def _filter_stores(stores: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object
     with st.sidebar:
         st.markdown("### Branch Pressure")
 
-        hilti_options = ["All Hilti stores"] + sorted(stores["nearest_hilti_store"].dropna().unique().tolist())
-        default_hilti = st.session_state.get("external_hilti_store", "All Hilti stores")
-        hilti_index = hilti_options.index(default_hilti) if default_hilti in hilti_options else 0
-        selected_hilti = st.selectbox(
-            "Hilti catchment",
-            options=hilti_options,
-            index=hilti_index,
-            help="Review all catchments or focus on one Hilti store.",
+        hub_options = [_display_all_hubs_label()] + sorted(stores["nearest_hilti_store"].dropna().unique().tolist())
+        default_hub = st.session_state.get("external_hilti_store", _display_all_hubs_label())
+        hub_index = hub_options.index(default_hub) if default_hub in hub_options else 0
+        selected_hub = st.selectbox(
+            "Construction hub",
+            options=hub_options,
+            index=hub_index,
+            format_func=lambda option: _display_name(option) if option != _display_all_hubs_label() else option,
+            help="Review all catchments or focus on one construction hub.",
         )
 
         competitor_group = st.radio(
@@ -107,7 +117,7 @@ def _filter_stores(stores: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object
             "Pressure radius",
             options=list(RADIUS_BANDS.keys()),
             index=1,
-            help="Show competitors within the selected distance from their nearest Hilti store.",
+            help="Show competitors within the selected distance from their nearest construction hub.",
         )
 
     filtered = stores.copy()
@@ -117,11 +127,11 @@ def _filter_stores(stores: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, object
         filtered = filtered.loc[filtered["competitor"].isin(selected_competitors)]
     if selected_bands:
         filtered = filtered.loc[filtered["threat_band"].isin(selected_bands)]
-    if selected_hilti != "All Hilti stores":
-        filtered = filtered.loc[filtered["nearest_hilti_store"] == selected_hilti]
+    if selected_hub != _display_all_hubs_label():
+        filtered = filtered.loc[filtered["nearest_hilti_store"] == selected_hub]
 
     return filtered, {
-        "selected_hilti": selected_hilti,
+        "selected_hilti": selected_hub,
         "competitor_group": competitor_group,
         "radius_label": radius_label,
     }
@@ -227,7 +237,7 @@ def _render_leaflet_point_map(
       <div id="{map_id}"></div>
       <script>
         const points = {json.dumps(payload, default=str)};
-        const hiltiStores = {json.dumps(hilti_stores, default=str)};
+        const constructionStores = {json.dumps(hilti_stores, default=str)};
         const colorColumn = {json.dumps(color_column)};
         const colorMap = {json.dumps(color_map)};
         const popupFields = {json.dumps(popup_fields)};
@@ -267,13 +277,13 @@ def _render_leaflet_point_map(
           bounds.push([lat, lon]);
         }});
 
-        hiltiStores.forEach((store) => {{
+        constructionStores.forEach((store) => {{
           const lat = Number(store.latitude);
           const lon = Number(store.longitude);
           if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
           const icon = L.divIcon({{
             className: "",
-            html: '<div class="hilti-marker">H</div>',
+            html: '<div class="hilti-marker">C</div>',
             iconSize: [22, 22],
             iconAnchor: [11, 11]
           }});
@@ -291,7 +301,7 @@ def _render_leaflet_point_map(
           const rows = Object.entries(colorMap).map(([label, color]) =>
             `<div class="legend-row"><span class="legend-dot" style="background:${{color}}"></span><span>${{label}}</span></div>`
           ).join("");
-          div.innerHTML = `<strong>Legend</strong>${{rows}}<div class="legend-row"><span class="legend-dot" style="background:#c8102e"></span><span>Hilti store</span></div>`;
+          div.innerHTML = `<strong>Legend</strong>${{rows}}<div class="legend-row"><span class="legend-dot" style="background:#c8102e"></span><span>Construction hub</span></div>`;
           return div;
         }};
         legend.addTo(map);
@@ -316,7 +326,7 @@ def _render_competitor_map(filtered: pd.DataFrame) -> None:
         popup_fields=[
             ("Competitor", "competitor"),
             ("Priority", "priority"),
-            ("Nearest Hilti", "nearest_hilti_store"),
+            ("Nearest hub", "nearest_hilti_store"),
             ("Distance km", "distance_to_nearest_hilti_km"),
             ("Postcode", "postcode"),
         ],
@@ -361,8 +371,8 @@ def _render_competitor_tables(filtered: pd.DataFrame) -> None:
 
     left, right = st.columns([1.15, 0.85], gap="medium")
     with left:
-        st.subheader("Which Hilti Stores Are Most Exposed?")
-        st.caption("Competitor branches are assigned to their nearest Hilti store.")
+        st.subheader("Which Construction Hubs Are Most Exposed?")
+        st.caption("Competitor branches are assigned to their nearest construction hub.")
         st.dataframe(pivot, width="stretch", hide_index=True)
     with right:
         st.subheader("Closest Competitor Branches")
@@ -382,7 +392,7 @@ def _render_executive_takeaway(filtered: pd.DataFrame, controls: dict[str, objec
 
     st.markdown(
         f"""
-        **Read this view as a pressure check.** For **{controls["competitor_group"]}** inside **{controls["radius_label"]}**, the most exposed Hilti catchment is **{top_store}** with **{top_count}** mapped competitor branches within 10 km. The nearest mapped branch is **{closest["store_name"]}** ({closest["competitor"]}) at **{closest["distance_to_nearest_hilti_km"]:.1f} km** from **{closest["nearest_hilti_store"]}**.
+        **Read this view as a pressure check.** For **{controls["competitor_group"]}** inside **{controls["radius_label"]}**, the most exposed construction hub is **{top_store}** with **{top_count}** mapped competitor branches within 10 km. The nearest mapped branch is **{closest["store_name"]}** ({closest["competitor"]}) at **{closest["distance_to_nearest_hilti_km"]:.1f} km** from **{closest["nearest_hilti_store"]}**.
         """
     )
 
@@ -467,7 +477,7 @@ def _integration_evidence() -> pd.DataFrame:
             {
                 "Signal": "Competitor branch pressure",
                 "Evidence": f"{len(stores):,} mapped competitor branches; top 10km pressure is {int(top_pressure['0-10 km total']) if top_pressure is not None else 0} near {top_pressure['nearest_hilti_store'] if top_pressure is not None else 'N/A'}",
-                "Overview value": "High. Gives managers immediate context on where Hilti stores face local convenience pressure.",
+                "Overview value": "High. Gives managers immediate context on where construction hubs face local convenience pressure.",
                 "Decision": "Integrate as optional pressure badge and detail panel",
             },
             {
@@ -479,13 +489,13 @@ def _integration_evidence() -> pd.DataFrame:
             {
                 "Signal": "Power-tool manufacturer competitors",
                 "Evidence": f"{len(manufacturers):,} brands researched; {len(manufacturer_locations):,} official DEWALT/Makita locations extracted",
-                "Overview value": "Medium. Useful for narrative and product-system threat, but not directly comparable with Hilti stores.",
+                "Overview value": "Medium. Useful for narrative and product-system threat, but not directly comparable with construction hubs.",
                 "Decision": "Keep in drill-down or methodology, do not add to main Overview yet",
             },
             {
                 "Signal": "Population",
                 "Evidence": f"{int(demand['population_mid_2024'].sum()):,} people covered across local authority rows",
-                "Overview value": "Medium. Useful as a denominator, but population alone is weak for Hilti demand.",
+                "Overview value": "Medium. Useful as a denominator, but population alone is weak for construction demand.",
                 "Decision": "Use only to normalise construction demand",
             },
         ]
@@ -516,7 +526,7 @@ def _render_integration_summary() -> None:
             """
             **Yes, but only as a compact pressure-and-demand panel.** The external data is useful, but it should not take over the Overview page. The strongest implementation would add two small context signals beside the existing territory story:
 
-            - **Competitor pressure within 10 km** of the relevant Hilti store.
+            - **Competitor pressure within 10 km** of the relevant construction hub.
             - **Construction customer demand** from Nomis local-unit counts.
 
             Manufacturer competitor data should stay in this page for now because DEWALT/Makita official points are service/dealer networks, while Milwaukee/Bosch only have researched locator/proxy coverage.
@@ -534,7 +544,7 @@ def _render_integration_summary() -> None:
                 {
                     "Overview element": "External pressure badge",
                     "Data source": "Competitor branches within 10 km",
-                    "User value": "Shows whether the selected Hilti catchment is crowded by trade counters.",
+                    "User value": "Shows whether the selected construction hub is crowded by trade counters.",
                 },
                 {
                     "Overview element": "Demand context line",
@@ -581,7 +591,7 @@ def _render_power_tool_manufacturers(selected_brands: list[str]) -> None:
                 popup_fields=[
                     ("Brand", "brand"),
                     ("Type", "location_type"),
-                    ("Nearest Hilti", "nearest_hilti_store"),
+                    ("Nearest hub", "nearest_hilti_store"),
                     ("Distance km", "distance_to_nearest_hilti_km"),
                     ("Postcode", "postcode"),
                     ("Services", "services"),
@@ -616,7 +626,7 @@ def _render_power_tool_manufacturers(selected_brands: list[str]) -> None:
         ]
         left, right = st.columns([1.0, 1.1], gap="medium")
         with left:
-            st.write("**Official Locations by Nearest Hilti Store**")
+            st.write("**Official Locations by Nearest Construction Hub**")
             st.dataframe(summary, width="stretch", hide_index=True)
         with right:
             st.write("**Closest Manufacturer Authorised Locations**")
@@ -645,7 +655,7 @@ def render_page() -> None:
     else:
         filtered = stores.copy()
         controls = {
-            "selected_hilti": "All Hilti stores",
+            "selected_hilti": _display_all_hubs_label(),
             "competitor_group": "All branch competitors",
             "radius_label": "All mapped competitors",
         }
@@ -664,8 +674,8 @@ def render_page() -> None:
             [
                 ("Competitor branches", f"{len(filtered):,}", "Filtered OSM branch points"),
                 ("Competitor chains", f"{competitor_count}", str(controls["competitor_group"])),
-                ("Direct local threats", f"{direct_threats:,}", "Branches within 5 km of nearest Hilti"),
-                ("Closest overlap", closest_text, f"Across {hilti_count} Hilti store catchments"),
+                ("Direct local threats", f"{direct_threats:,}", "Branches within 5 km of nearest hub"),
+                ("Closest overlap", closest_text, f"Across {hilti_count} construction hub catchments"),
             ]
         )
 
@@ -676,7 +686,7 @@ def render_page() -> None:
         with left:
             with st.container(border=True):
                 st.subheader("Nearby Competitor Branches")
-                st.caption("Point color shows how close each competitor branch is to its nearest Hilti store.")
+                st.caption("Point color shows how close each competitor branch is to its nearest construction hub.")
                 _render_competitor_map(filtered)
         with right:
             with st.container(border=True):
@@ -747,6 +757,6 @@ def render_page() -> None:
                 ("Power-tool authorised locations", row_counts.get("power_tool_authorised_locations", 0)),
             ]
             st.dataframe(pd.DataFrame(source_rows, columns=["Dataset", "Rows"]), width="stretch", hide_index=True)
-            st.caption("Full source links and limitations are documented in `HILTI_EXTERNAL_DATA_RESEARCH_REPORT.md`.")
+            st.caption("Full source links and limitations are documented in the external research report.")
 
         _render_customer_segments()

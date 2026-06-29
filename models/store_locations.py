@@ -7,11 +7,11 @@ import pandas as pd
 from config import APP_ROOT
 
 
-# Coordinates are taken from the official Hilti UK store pages' "Get Directions"
+# Coordinates are taken from the official store pages' "Get Directions"
 # links, which point to Google Maps with exact lat/lon values.
 HILTI_UK_STORES: tuple[dict[str, object], ...] = (
     {
-        "name": "Hilti Store Belfast",
+        "name": "Construction Hub Belfast",
         "city": "Belfast",
         "postcode": "BT3 9BP",
         "district": "BT3",
@@ -20,7 +20,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/belfast",
     },
     {
-        "name": "Hilti Store Birmingham",
+        "name": "Construction Hub Birmingham",
         "city": "Birmingham",
         "postcode": "B6 4EX",
         "district": "B6",
@@ -29,7 +29,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/birmingham",
     },
     {
-        "name": "Hilti Store Cardiff",
+        "name": "Construction Hub Cardiff",
         "city": "Cardiff",
         "postcode": "CF24 5PF",
         "district": "CF24",
@@ -38,7 +38,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/cardiff",
     },
     {
-        "name": "Hilti Store Edinburgh",
+        "name": "Construction Hub Edinburgh",
         "city": "Edinburgh",
         "postcode": "EH15 1TB",
         "district": "EH15",
@@ -47,7 +47,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/edinburgh",
     },
     {
-        "name": "Hilti Store Edmonton",
+        "name": "Construction Hub Edmonton",
         "city": "London",
         "postcode": "N18 3AF",
         "district": "N18",
@@ -56,7 +56,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/edmonton",
     },
     {
-        "name": "Hilti Store Glasgow",
+        "name": "Construction Hub Glasgow",
         "city": "Glasgow",
         "postcode": "G5 8SG",
         "district": "G5",
@@ -65,7 +65,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/glasgow",
     },
     {
-        "name": "Hilti Store Liverpool",
+        "name": "Construction Hub Liverpool",
         "city": "Liverpool",
         "postcode": "L6 1NA",
         "district": "L6",
@@ -74,7 +74,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/liverpool",
     },
     {
-        "name": "Hilti Store Manchester",
+        "name": "Construction Hub Manchester",
         "city": "Manchester",
         "postcode": "M5 3EY",
         "district": "M5",
@@ -83,7 +83,7 @@ HILTI_UK_STORES: tuple[dict[str, object], ...] = (
         "url": "https://www.hilti.co.uk/stores/manchester",
     },
     {
-        "name": "Hilti Store Southwark",
+        "name": "Construction Hub Southwark",
         "city": "London",
         "postcode": "SE1 0UE",
         "district": "SE1",

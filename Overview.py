@@ -5,7 +5,7 @@ from screens.market_opportunity import render_page as render_market_page
 
 
 st.set_page_config(
-    page_title="Hilti Territory Growth Dashboard",
+    page_title="Construction Territory Growth Dashboard",
     page_icon="🗺️",
     layout="wide",
 )
